@@ -1,0 +1,29 @@
+replicaCount: 1
+
+image:
+  pullPolicy: Always
+
+service:
+  type: ClusterIP
+
+persistence:
+  enabled: true
+  size: 3Gi
+  accessMode: ReadWriteOnce
+  mountPath: /tmp/data
+
+gluesyncCoreHub:
+  image: molo17/gluesync-core-hub:2.0.3.548869a45-amd64
+
+gluesyncMySqlCdcSource:
+  image: molo17/gluesync-mysql-cdc:2.0.3.548869a45-amd64
+
+gluesyncVerticaTarget:
+  image: molo17/gluesync-vertica:2.0.3.548869a45-amd64
+
+volumeMounts:
+  - name: gluesync-license
+    mountPath: /opt/gluesync/data/gs-license.dat
+    subPath: gs-license.dat
+  - name: gluesync-database
+    mountPath: /opt/gluesync/database

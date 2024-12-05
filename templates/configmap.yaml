@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gluesync-license
+data:
+  gs-license.dat: |
+    {{ .Files.Get "gs-license.dat" | indent 4 }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gluesync-bootstrap
+data:
+  bootstrap-core-hub.json: |
+    {
+        "apiTokenSecret": "gs-trial"
+    }
+---

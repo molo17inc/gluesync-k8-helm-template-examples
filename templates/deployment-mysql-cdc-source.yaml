@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "gluesync.fullname" . }}-mysql-cdc-source
+  labels:
+    app.kubernetes.io/name: {{ include "gluesync.name" . }}-mysql-cdc-source
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/version: {{ .Chart.AppVersion }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "gluesync.name" . }}-mysql-cdc-source
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "gluesync.name" . }}-mysql-cdc-source
+        app.kubernetes.io/instance: {{ .Release.Name }}
+    spec:
+      containers:
+        - name: gluesync-cdc-source
+          image: "{{ .Values.gluesyncMySqlCdcSource.image }}"
+          env:
+            - name: type
+              value: source
+            - name: GLUESYNC_HOST
+              value: "gluesync-trial-gluesync-core-hub"
+          ports:
+            - containerPort: 1717
+              protocol: TCP
+          volumeMounts:
+            - name: gluesync-mysql-cdc-source
+              mountPath: /opt/gluesync/database
+            - name: gluesync-license
+              mountPath: /opt/gluesync/data/gs-license.dat
+              subPath: gs-license.dat
+      volumes:
+        - name: gluesync-license
+          configMap:
+            name: gluesync-license
+        - name: gluesync-mysql-cdc-source
+          persistentVolumeClaim:
+            claimName: gluesync-mysql-cdc-source
