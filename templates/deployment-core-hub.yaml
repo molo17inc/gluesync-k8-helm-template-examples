@@ -1,5 +1,5 @@
 apiVersion: apps/v1
-kind: Deployment
+kind: StatefulSet
 metadata:
   name: {{ include "gluesync.fullname" . }}-core-hub
   labels:
@@ -21,26 +21,74 @@ spec:
     spec:
       containers:
         - name: gluesync-core-hub
-          image: "{{ .Values.gluesyncCoreHub.image }}"
+          image: "{{ .Values.gluesyncCoreHub.image }}:{{ .Chart.AppVersion }}"
+          env:
+            - name: SSL_ENABLED
+              value: "true" # set to true if you want to activate TLS encryption
+            - name: SECURITY_CONFIG_FILE
+              value: "/opt/gluesync/data/security-config.json"
+            - name: LOG_CONFIG_FILE
+              value: "/opt/gluesync/shared/logback.xml"
+            - name: GRAFANA_REMOTE_ADDRESS
+              value: "/grafana/d/fecxnzptcq8zkd/core-hub-metrics"
           ports:
             - containerPort: 1717
               protocol: TCP
+          resources:
+            limits:
+              cpu: {{ .Values.resources.gluesyncCoreHub.limits.cpu }}
+              memory: {{ .Values.resources.gluesyncCoreHub.limits.memory }}
+            requests:
+              cpu: {{ .Values.resources.gluesyncCoreHub.requests.cpu }}
+              memory: {{ .Values.resources.gluesyncCoreHub.requests.memory }}
           volumeMounts:
-            - name: gluesync-license
-              mountPath: /opt/gluesync/data/gs-license.dat
-              subPath: gs-license.dat
             - name: gluesync-core-hub
-              mountPath: /opt/gluesync/database
+              mountPath: {{ .Values.persistence.coreHub.data.mountPath | default "/opt/gluesync/data" }}
+            - name: gluesync-license
+              mountPath: {{ .Values.persistence.coreHub.data.mountPath | default "/opt/gluesync/data" }}/license.dat
+              subPath: gs-license.dat
             - name: gluesync-bootstrap
-              mountPath: /opt/gluesync/data/bootstrap-core-hub.json
+              mountPath: {{ .Values.persistence.coreHub.data.mountPath | default "/opt/gluesync/data" }}/bootstrap-core-hub.json
               subPath: bootstrap-core-hub.json
+            - name: ssl-config
+              mountPath: {{ .Values.persistence.coreHub.data.mountPath | default "/opt/gluesync/data" }}/security-config.json
+              subPath: security-config.json
+            - name: gluesync-shared
+              mountPath: /opt/gluesync/shared
+            {{- if and .Values.persistence.enabled .Values.persistence.coreHub.enabled .Values.persistence.coreHub.logs.enabled }}
+            - name: gluesync-core-hub-logs
+              mountPath: {{ .Values.persistence.coreHub.logs.mountPath | default "/opt/gluesync/logs" }}
+            {{- end }}
       volumes:
         - name: gluesync-license
-          configMap:
-            name: gluesync-license
+          secret:
+            secretName: {{ include "gluesync.fullname" . }}-shared
+            items:
+            - key: gs-license.dat
+              path: gs-license.dat
         - name: gluesync-bootstrap
           configMap:
             name: gluesync-bootstrap
+        - name: gluesync-logback
+          secret:
+            secretName: {{ include "gluesync.fullname" . }}-shared
+            items:
+            - key: logback.xml
+              path: logback.xml
+        - name: ssl-config
+          secret:
+            secretName: {{ include "gluesync.fullname" . }}-shared
+            items:
+            - key: security-config.json
+              path: security-config.json
+        - name: gluesync-shared
+          secret:
+            secretName: {{ include "gluesync.fullname" . }}-shared
         - name: gluesync-core-hub
           persistentVolumeClaim:
             claimName: gluesync-core-hub
+        {{- if and .Values.persistence.enabled .Values.persistence.coreHub.enabled .Values.persistence.coreHub.logs.enabled }}
+        - name: gluesync-core-hub-logs
+          persistentVolumeClaim:
+            claimName: gluesync-core-hub-logs
+        {{- end }}

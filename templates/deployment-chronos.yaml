@@ -1,0 +1,79 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "gluesync.fullname" . }}-chronos
+  labels:
+    app.kubernetes.io/name: {{ include "gluesync.name" . }}-chronos
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/version: {{ .Chart.AppVersion }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "gluesync.name" . }}-chronos
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "gluesync.name" . }}-chronos
+        app.kubernetes.io/instance: {{ .Release.Name }}
+    spec:
+      containers:
+        - name: gluesync-chronos
+          image: "{{ .Values.gluesyncChronos.image }}:{{ .Values.gluesyncChronos.tag | default .Chart.AppVersion }}"
+          env:
+            - name: SSL_ENABLED
+              value: "true"
+            - name: SSL_SKIP_VERIFY
+              value: "true"
+            - name: TIMEZONE
+              value: "UTC"
+            - name: GLUESYNC_HOST
+              value: "https://{{ include "gluesync.fullname" . }}-core-hub:1717"
+          ports:
+            - containerPort: 1717
+              protocol: TCP
+          resources:
+            limits:
+              cpu: {{ .Values.resources.gluesyncChronos.limits.cpu }}
+              memory: {{ .Values.resources.gluesyncChronos.limits.memory }}
+            requests:
+              cpu: {{ .Values.resources.gluesyncChronos.requests.cpu }}
+              memory: {{ .Values.resources.gluesyncChronos.requests.memory }}
+          volumeMounts:
+            - name: gluesync-shared
+              mountPath: /opt/gluesync/data
+              readOnly: true
+            - name: gluesync-jks
+              mountPath: /opt/gluesync/shared/gluesync.com.jks
+              subPath: gluesync.com.jks
+              readOnly: true
+            {{- if and .Values.persistence.enabled .Values.persistence.chronos.enabled .Values.persistence.chronos.data.enabled }}
+            - name: gluesync-chronos-data
+              mountPath: {{ .Values.persistence.chronos.data.mountPath | default "/app/data" }}
+            {{- end }}
+            {{- if and .Values.persistence.enabled .Values.persistence.chronos.enabled .Values.persistence.chronos.logs.enabled }}
+            - name: gluesync-chronos-logs
+              mountPath: {{ .Values.persistence.chronos.logs.mountPath | default "/app/logs" }}
+            {{- end }}
+      volumes:
+        - name: gluesync-shared
+          secret:
+            secretName: {{ include "gluesync.fullname" . }}-shared
+        - name: gluesync-jks
+          secret:
+            secretName: {{ include "gluesync.fullname" . }}-shared
+            items:
+            - key: gluesync.com.jks
+              path: gluesync.com.jks
+        {{- if and .Values.persistence.enabled .Values.persistence.chronos.enabled .Values.persistence.chronos.data.enabled }}
+        - name: gluesync-chronos-data
+          persistentVolumeClaim:
+            claimName: gluesync-chronos-data
+        {{- end }}
+        {{- if and .Values.persistence.enabled .Values.persistence.chronos.enabled .Values.persistence.chronos.logs.enabled }}
+        - name: gluesync-chronos-logs
+          persistentVolumeClaim:
+            claimName: gluesync-chronos-logs
+        {{- end }}

@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "gluesync.fullname" . }}-{{ .Values.gluesyncTargetAgent.name }}-target-agent
+  labels:
+    app.kubernetes.io/name: {{ include "gluesync.name" . }}-{{ .Values.gluesyncTargetAgent.name }}-target-agent
+    app.kubernetes.io/instance: {{ .Release.Name }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - name: port-1717
+      protocol: TCP
+      port: 1717
+      targetPort: 1717
+  selector:
+    app.kubernetes.io/name: {{ include "gluesync.name" . }}-{{ .Values.gluesyncTargetAgent.name }}-target-agent
+    app.kubernetes.io/instance: {{ .Release.Name }}

@@ -1,0 +1,62 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "gluesync.fullname" . }}-{{ .Values.gluesyncTargetAgent.name }}-target-agent
+  labels:
+    app.kubernetes.io/name: {{ include "gluesync.name" . }}-{{ .Values.gluesyncTargetAgent.name }}-target-agent
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/version: {{ .Chart.AppVersion }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "gluesync.name" . }}-{{ .Values.gluesyncTargetAgent.name }}-target-agent
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "gluesync.name" . }}-{{ .Values.gluesyncTargetAgent.name }}-target-agent
+        app.kubernetes.io/instance: {{ .Release.Name }}
+    spec:
+      containers:
+        - name: gluesync-{{ .Values.gluesyncTargetAgent.name }}-target-agent
+          image: "{{ .Values.gluesyncTargetAgent.image }}:{{ .Chart.AppVersion }}"
+          env:
+            - name: type
+              value: target
+            - name: SSL_ENABLED
+              value: "true" # set to true if you want to activate TLS encryption
+            - name: GLUESYNC_HOST
+              value: "{{ include "gluesync.fullname" . }}-core-hub"
+          ports:
+            - containerPort: 1717
+              protocol: TCP
+          resources:
+            limits:
+              cpu: {{ .Values.resources.gluesyncTarget.limits.cpu }}
+              memory: {{ .Values.resources.gluesyncTarget.limits.memory }}
+            requests:
+              cpu: {{ .Values.resources.gluesyncTarget.requests.cpu }}
+              memory: {{ .Values.resources.gluesyncTarget.requests.memory }}
+          volumeMounts:
+            - name: gluesync-{{ .Values.gluesyncTargetAgent.name }}-target-agent
+              mountPath: {{ .Values.persistence.targetAgent.data.mountPath | default "/opt/gluesync/data" }}
+            - name: gluesync-shared
+              mountPath: /opt/gluesync/shared
+            {{- if and .Values.persistence.enabled .Values.persistence.targetAgent.enabled .Values.persistence.targetAgent.logs.enabled }}
+            - name: gluesync-{{ .Values.gluesyncTargetAgent.name }}-target-agent-logs
+              mountPath: {{ .Values.persistence.targetAgent.logs.mountPath | default "/opt/gluesync/logs" }}
+            {{- end }}
+      volumes:
+        - name: gluesync-shared
+          secret:
+            secretName: {{ include "gluesync.fullname" . }}-shared
+        - name: gluesync-{{ .Values.gluesyncTargetAgent.name }}-target-agent
+          persistentVolumeClaim:
+            claimName: gluesync-{{ .Values.gluesyncTargetAgent.name }}-target-agent
+        {{- if and .Values.persistence.enabled .Values.persistence.targetAgent.enabled .Values.persistence.targetAgent.logs.enabled }}
+        - name: gluesync-{{ .Values.gluesyncTargetAgent.name }}-target-agent-logs
+          persistentVolumeClaim:
+            claimName: gluesync-{{ .Values.gluesyncTargetAgent.name }}-target-agent-logs
+        {{- end }}

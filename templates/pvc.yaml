@@ -1,36 +1,169 @@
+{{- if and .Values.persistence.enabled .Values.persistence.coreHub.enabled .Values.persistence.coreHub.data.enabled }}
+---
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: gluesync-core-hub
 spec:
   accessModes:
-    - ReadWriteOnce
+    - {{ .Values.persistence.accessMode | default "ReadWriteOnce" }}
   resources:
     requests:
-      storage: 2Gi
-  storageClassName: "standard"
+      storage: {{ .Values.persistence.coreHub.data.size | default "2Gi" }}
+  {{- if .Values.persistence.storageClass }}
+  storageClassName: {{ .Values.persistence.storageClass | quote }}
+  {{- end }}
+{{- end }}
+
+{{- if and .Values.persistence.enabled .Values.persistence.sourceAgent.enabled .Values.persistence.sourceAgent.data.enabled (and .Values.gluesyncSourceAgent.name (ne .Values.gluesyncSourceAgent.name "")) }}
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: gluesync-mysql-cdc-source
+  name: gluesync-{{ .Values.gluesyncSourceAgent.name }}-source-agent
 spec:
   accessModes:
-    - ReadWriteOnce
+    - {{ .Values.persistence.accessMode | default "ReadWriteOnce" }}
   resources:
     requests:
-      storage: 2Gi
-  storageClassName: "standard"
+      storage: {{ .Values.persistence.sourceAgent.data.size | default "2Gi" }}
+  {{- if .Values.persistence.storageClass }}
+  storageClassName: {{ .Values.persistence.storageClass | quote }}
+  {{- end }}
+{{- end }}
+
+{{- if and .Values.persistence.enabled .Values.persistence.targetAgent.enabled .Values.persistence.targetAgent.data.enabled (and .Values.gluesyncTargetAgent.name (ne .Values.gluesyncTargetAgent.name "")) }}
 ---
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: gluesync-vertica-target
+  name: gluesync-{{ .Values.gluesyncTargetAgent.name }}-target-agent
 spec:
   accessModes:
-    - ReadWriteOnce
+    - {{ .Values.persistence.accessMode | default "ReadWriteOnce" }}
   resources:
     requests:
-      storage: {{ .Values.persistence.size }}
-  storageClassName: "standard"
+      storage: {{ .Values.persistence.targetAgent.data.size | default "3Gi" }}
+  {{- if .Values.persistence.storageClass }}
+  storageClassName: {{ .Values.persistence.storageClass | quote }}
+  {{- end }}
+{{- end }}
+
+{{- if and .Values.persistence.enabled .Values.persistence.chronos.enabled .Values.persistence.chronos.data.enabled }}
 ---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: gluesync-chronos-data
+spec:
+  accessModes:
+    - {{ .Values.persistence.accessMode | default "ReadWriteOnce" }}
+  resources:
+    requests:
+      storage: {{ .Values.persistence.chronos.data.size | default "1Gi" }}
+  {{- if .Values.persistence.storageClass }}
+  storageClassName: {{ .Values.persistence.storageClass | quote }}
+  {{- end }}
+{{- end }}
+
+{{- if and .Values.persistence.enabled .Values.persistence.chronos.enabled .Values.persistence.chronos.logs.enabled }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: gluesync-chronos-logs
+spec:
+  accessModes:
+    - {{ .Values.persistence.accessMode | default "ReadWriteOnce" }}
+  resources:
+    requests:
+      storage: {{ .Values.persistence.chronos.logs.size | default "2Gi" }}
+  {{- if .Values.persistence.storageClass }}
+  storageClassName: {{ .Values.persistence.storageClass | quote }}
+  {{- end }}
+{{- end }}
+
+{{- if and .Values.persistence.enabled .Values.persistence.coreHub.enabled .Values.persistence.coreHub.logs.enabled }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: gluesync-core-hub-logs
+spec:
+  accessModes:
+    - {{ .Values.persistence.accessMode | default "ReadWriteOnce" }}
+  resources:
+    requests:
+      storage: {{ .Values.persistence.coreHub.logs.size | default "10Gi" }}
+  {{- if .Values.persistence.storageClass }}
+  storageClassName: {{ .Values.persistence.storageClass | quote }}
+  {{- end }}
+{{- end }}
+
+{{- if and .Values.persistence.enabled .Values.persistence.sourceAgent.enabled .Values.persistence.sourceAgent.logs.enabled (and .Values.gluesyncSourceAgent.name (ne .Values.gluesyncSourceAgent.name "")) }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: gluesync-{{ .Values.gluesyncSourceAgent.name }}-source-agent-logs
+spec:
+  accessModes:
+    - {{ .Values.persistence.accessMode | default "ReadWriteOnce" }}
+  resources:
+    requests:
+      storage: {{ .Values.persistence.sourceAgent.logs.size | default "10Gi" }}
+  {{- if .Values.persistence.storageClass }}
+  storageClassName: {{ .Values.persistence.storageClass | quote }}
+  {{- end }}
+{{- end }}
+
+{{- if and .Values.persistence.enabled .Values.persistence.targetAgent.enabled .Values.persistence.targetAgent.logs.enabled (and .Values.gluesyncTargetAgent.name (ne .Values.gluesyncTargetAgent.name "")) }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: gluesync-{{ .Values.gluesyncTargetAgent.name }}-target-agent-logs
+spec:
+  accessModes:
+    - {{ .Values.persistence.accessMode | default "ReadWriteOnce" }}
+  resources:
+    requests:
+      storage: {{ .Values.persistence.targetAgent.logs.size | default "10Gi" }}
+  {{- if .Values.persistence.storageClass }}
+  storageClassName: {{ .Values.persistence.storageClass | quote }}
+  {{- end }}
+{{- end }}
+
+{{- if and .Values.persistence.enabled .Values.persistence.prometheus.enabled }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: gluesync-prometheus-data
+spec:
+  accessModes:
+    - {{ .Values.persistence.accessMode | default "ReadWriteOnce" }}
+  resources:
+    requests:
+      storage: {{ .Values.persistence.prometheus.size | default "10Gi" }}
+  {{- if .Values.persistence.storageClass }}
+  storageClassName: {{ .Values.persistence.storageClass | quote }}
+  {{- end }}
+{{- end }}
+
+{{- if and .Values.persistence.enabled .Values.persistence.grafana.enabled }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: gluesync-grafana-data
+spec:
+  accessModes:
+    - {{ .Values.persistence.accessMode | default "ReadWriteOnce" }}
+  resources:
+    requests:
+      storage: {{ .Values.persistence.grafana.size | default "5Gi" }}
+  {{- if .Values.persistence.storageClass }}
+  storageClassName: {{ .Values.persistence.storageClass | quote }}
+  {{- end }}
+{{- end }}

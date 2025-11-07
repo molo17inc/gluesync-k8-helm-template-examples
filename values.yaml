@@ -4,26 +4,140 @@ image:
   pullPolicy: Always
 
 service:
-  type: ClusterIP
-
-persistence:
-  enabled: true
-  size: 3Gi
-  accessMode: ReadWriteOnce
-  mountPath: /tmp/data
+  type: NodePort
 
 gluesyncCoreHub:
-  image: molo17/gluesync-core-hub:2.0.3.548869a45-amd64
+  name: "core-hub"
+  image: ""
 
-gluesyncMySqlCdcSource:
-  image: molo17/gluesync-mysql-cdc:2.0.3.548869a45-amd64
+gluesyncSourceAgent:
+  name: ""
+  image: ""
 
-gluesyncVerticaTarget:
-  image: molo17/gluesync-vertica:2.0.3.548869a45-amd64
+gluesyncTargetAgent:
+  name: ""
+  image: ""
 
-volumeMounts:
-  - name: gluesync-license
-    mountPath: /opt/gluesync/data/gs-license.dat
-    subPath: gs-license.dat
-  - name: gluesync-database
-    mountPath: /opt/gluesync/database
+gluesyncChronos:
+  name: "chronos"
+  image: "molo17/gluesync-chronos"
+  tag: "latest"  # Specify version tag here (e.g., "0.0.xyz for its beta channel", "latest")
+
+# Global persistence settings (can be overridden per service)
+persistence:
+  enabled: true
+  storageClass: ""  # Set to your storage class or leave empty for default
+  accessMode: ReadWriteOnce
+  
+  # Service-specific persistence configurations
+  coreHub:
+    enabled: true
+    data:
+      enabled: true
+      size: 5Gi
+      mountPath: /opt/gluesync/data
+    logs:
+      enabled: true
+      size: 10Gi
+      mountPath: /opt/gluesync/logs
+    
+  sourceAgent:
+    enabled: true
+    data:
+      enabled: true
+      size: 2Gi
+      mountPath: /opt/gluesync/data
+    logs:
+      enabled: true
+      size: 10Gi
+      mountPath: /opt/gluesync/logs
+    
+  targetAgent:
+    enabled: true
+    data:
+      enabled: true
+      size: 3Gi
+      mountPath: /opt/gluesync/data
+    logs:
+      enabled: true
+      size: 10Gi
+      mountPath: /opt/gluesync/logs
+    
+  chronos:
+    enabled: true
+    data:
+      enabled: true
+      size: 1Gi
+      mountPath: /app/data
+    logs:
+      enabled: true
+      size: 2Gi
+      mountPath: /app/logs
+      
+  prometheus:
+    enabled: true
+    size: 10Gi
+    mountPath: /prometheus
+    retention: 30d
+    retentionSize: 10GB
+    
+  grafana:
+    enabled: true
+    size: 5Gi
+    mountPath: /var/lib/grafana
+
+# Resources for each agent/service 
+# NOTE: change the values based on your needs
+resources:
+  gluesyncCoreHub:
+    limits:
+      cpu: "4"
+      memory: "2Gi"
+    requests:
+      cpu: "2"
+      memory: "2Gi"
+  gluesyncSource:
+    limits:
+      cpu: "4"
+      memory: "4Gi"
+    requests:
+      cpu: "2"
+      memory: "2Gi"
+  gluesyncTarget:
+    limits:
+      cpu: "4"
+      memory: "4Gi"
+    requests:
+      cpu: "2"
+      memory: "2Gi"
+  prometheus:
+    limits:
+      cpu: "2"
+      memory: "2Gi"
+    requests:
+      cpu: "500m"
+      memory: "512Mi"
+  grafana:
+    limits:
+      cpu: "1"
+      memory: "1Gi"
+    requests:
+      cpu: "500m"
+      memory: "512Mi"
+  gluesyncChronos:
+    limits:
+      cpu: "1"
+      memory: "1Gi"
+    requests:
+      cpu: "500m"
+      memory: "512Mi"
+
+# Secrets - these should be provided during deployment
+# You can override these with --set-file or by creating a secrets.yaml
+secrets:
+  jks: ""  # Java KeyStore (base64 will be applied automatically)
+  securityConfig: ""  # security-config.json content
+  license: ""  # gs-license.dat content
+  logback: ""  # logback.xml content
+  cert: ""  # gluesync-cert.pem content
+  key: ""  # gluesync-key.pem content

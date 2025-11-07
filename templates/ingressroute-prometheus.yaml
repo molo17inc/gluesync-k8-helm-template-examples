@@ -1,0 +1,21 @@
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: {{ include "gluesync.fullname" . }}-prometheus
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: {{ include "gluesync.name" . }}-prometheus
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/version: {{ .Chart.AppVersion }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: PathPrefix(`/prometheus`)
+      kind: Rule
+      priority: 10
+      services:
+        - name: {{ include "gluesync.fullname" . }}-prometheus
+          port: 9090
+  tls: {}

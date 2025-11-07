@@ -8,7 +8,7 @@ metadata:
 spec:
   type: {{ .Values.service.type }}
   ports:
-    - name: port-1717
+    - name: https-1717
       protocol: TCP
       port: 1717
       targetPort: 1717
