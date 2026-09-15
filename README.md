@@ -5,7 +5,6 @@ This directory contains the Helm chart and deployment scripts for Gluesync with 
 ## Prerequisites
 
 The deployment scripts automatically install Traefik if not already present. Traefik provides:
-
 - IngressRoute CRDs for advanced routing
 - TLS termination and certificate handling
 - Path-based routing for multiple services
@@ -16,46 +15,34 @@ The deployment scripts automatically install Traefik if not already present. Tra
 Choose the appropriate deployment script for your environment:
 
 ### Local Development
-
 ```bash
 ./deploy-local.sh
 ```
-
 For Docker Desktop, kind, minikube, or other local Kubernetes clusters.
-
 - Automatically installs Traefik with NodePort service
 - Requires port forwarding to access services
 
 ### AWS EKS
-
 ```bash
 ./deploy-eks.sh
 ```
-
 Deploys to Amazon EKS with Network Load Balancer.
-
 - Automatically installs Traefik with LoadBalancer
 - Direct access via AWS NLB DNS
 
 ### Google GKE
-
 ```bash
 ./deploy-gcp.sh
 ```
-
 Deploys to Google Kubernetes Engine with LoadBalancer.
-
 - Automatically installs Traefik with LoadBalancer
 - Direct access via GCP LoadBalancer IP
 
 ### Azure AKS
-
 ```bash
 ./deploy-azure.sh
 ```
-
 Deploys to Azure Kubernetes Service with LoadBalancer.
-
 - Automatically installs Traefik with LoadBalancer
 - Direct access via Azure LoadBalancer IP
 
@@ -168,26 +155,23 @@ Gluesync uses Traefik IngressRoutes for advanced routing:
 ## Firewall Configuration
 
 ### AWS EKS
-
-Ensure your security groups allow inbound traffic on ports 80, 443, 9443, 3000.
+Ensure your security groups allow inbound traffic on ports 80 and 443.
 
 ### Google GKE
-
 ```bash
 gcloud compute firewall-rules create allow-gluesync \
-  --allow tcp:80,tcp:443,tcp:9443,tcp:3000 \
+  --allow tcp:80,tcp:443 \
   --source-ranges=0.0.0.0/0
 ```
 
 ### Azure AKS
-
 ```bash
 az network nsg rule create \
   --resource-group <your-rg> \
   --nsg-name <your-nsg> \
   --name allow-gluesync \
   --priority 100 \
-  --destination-port-ranges 80 443 9443 3000 \
+  --destination-port-ranges 80 443 \
   --access Allow \
   --protocol Tcp
 ```
@@ -195,27 +179,22 @@ az network nsg rule create \
 ## Troubleshooting
 
 ### Check Deployment Status
-
 ```bash
 kubectl get all -n gluesync-dev
 ```
 
 ### View Logs
-
 ```bash
 kubectl logs -n gluesync-dev deployment/traefik -f
 ```
 
 ### Check Service
-
 ```bash
 kubectl get svc -n gluesync-dev
 ```
 
 ### Port Forwarding Issues
-
 If port forwarding fails:
-
 1. Check if ports are already in use: `lsof -i :9443`
 2. Ensure the service is running: `kubectl get pods -n gluesync-dev`
 3. Try different ports: `kubectl port-forward ... 19443:9443`
@@ -223,7 +202,6 @@ If port forwarding fails:
 ## Additional Documentation
 
 See `DEPLOYMENT.md` for comprehensive deployment documentation including:
-
 - Detailed configuration options
 - Advanced scenarios
 - Migration guides
@@ -232,13 +210,11 @@ See `DEPLOYMENT.md` for comprehensive deployment documentation including:
 ## Examples
 
 The `examples/` folder contains sample configurations for different deployment scenarios:
-
 - `traefik-helmrelease.yaml` - Flux/GitOps deployment example
 
 ## Support
 
 For issues or questions:
-
 1. Check pod status: `kubectl get pods -n <namespace>`
 2. Review logs: `kubectl logs -n <namespace> <pod-name>`
 3. Verify ingress: `kubectl get ingress -n <namespace>`

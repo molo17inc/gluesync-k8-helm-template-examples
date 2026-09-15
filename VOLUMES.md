@@ -1,182 +1,77 @@
-# Gluesync Kubernetes - Volume Configuration
+# Gluesync Kubernetes volume configuration
 
-This document describes the volume mounts and storage configuration for Gluesync components.
+The chart enables persistent storage by default. Configure storage in the
+`persistence` section of `values.yaml` before installation.
 
-## Grafana Volumes
+## Default persistent volumes
 
-Grafana uses two volumes matching the Docker Compose configuration:
+| Component | Purpose | Default size | Mount path |
+|---|---|---:|---|
+| Core Hub | Data | 100 GiB | `/opt/gluesync/data` |
+| Core Hub | Logs | 10 GiB | `/opt/gluesync/logs` |
+| Chronos | Data | 1 GiB | `/app/data` |
+| Chronos | Logs | 2 GiB | `/app/logs` |
+| Prometheus | Metrics | 10 GiB | `/prometheus` |
+| Grafana | Database, plugins, and user data | 5 GiB | `/var/lib/grafana` |
 
-### 1. Provisioning Volume
+The chart uses `ReadWriteOnce`. Set `persistence.storageClass` to a storage
+class available in your cluster, or leave it empty to use the cluster default.
 
-- **Mount Path**: `/etc/grafana/provisioning`
-- **Type**: ConfigMap (`grafana-provisioning`)
-- **Purpose**: Contains Grafana provisioning configuration (datasources, dashboards)
-- **Source**: ConfigMap with datasources.yml
+Grafana datasource provisioning is mounted from the `grafana-datasources`
+ConfigMap. Dashboards and the dashboard provider are included in the
+`molo17/grafana` image and are not mounted from a chart ConfigMap.
 
-### 2. Data Volume
+## Customize storage
 
-- **Mount Path**: `/var/lib/grafana`
-- **Type**: emptyDir (ephemeral) or PersistentVolumeClaim (persistent)
-- **Purpose**: Stores Grafana database, plugins, and user data
-- **Contents**:
-  - `grafana.db` - SQLite database
-  - `plugins/` - Installed plugins
-  - `csv/`, `pdf/`, `png/` - Export directories
-
-## Storage Options
-
-### Development (Current Configuration)
-
-Uses `emptyDir` volumes:
-
-- **Pros**: Simple, no setup required
-- **Cons**: Data lost when pod restarts
-- **Use Case**: Local development, testing
+Edit the supplied `values.yaml`; do not replace it with the blank values from
+the public chart example because the generated file also contains the trial
+licence and security material.
 
 ```yaml
-volumes:
-  - name: grafana-data
-    emptyDir: {}
-```
-
-### Production (Recommended)
-
-Use PersistentVolumeClaims for data persistence:
-
-**Benefits:**
-
-- Data survives pod restarts
-- Supports backup/restore
-- Better for production use
-
-**Example PVC:**
-
-```yaml
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: grafana-data
-spec:
-  accessModes:
-    - ReadWriteOnce
-  resources:
-    requests:
-      storage: 5Gi
-```
-
-Then update deployment:
-
-```yaml
-volumes:
-  - name: grafana-data
-    persistentVolumeClaim:
-      claimName: grafana-data
-```
-
-## Volume Comparison: Docker vs Kubernetes
-
-| Component | Docker Compose | Kubernetes | Notes |
-|-----------|----------------|------------|-------|
-| **Grafana Provisioning** | `./grafana:/etc/grafana/provisioning` | ConfigMap → `/etc/grafana/provisioning` | Config files |
-| **Grafana Data** | `./data:/var/lib/grafana` | emptyDir → `/var/lib/grafana` | User data, DB |
-
-## Adding Persistent Storage
-
-To enable persistent storage for Grafana:
-
-1. Create a PVC:
-
-```bash
-kubectl apply -f - <<EOF
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: grafana-data
-  namespace: gluesync-dev
-spec:
-  accessModes:
-    - ReadWriteOnce
-  resources:
-    requests:
-      storage: 5Gi
-EOF
-```
-
-2. Update `values.yaml`:
-
-```yaml
-grafana:
-  persistence:
+persistence:
+  enabled: true
+  storageClass: "your-storage-class"
+  accessMode: ReadWriteOnce
+  coreHub:
     enabled: true
-    storageClass: "" # or specify your storage class
+    data:
+      enabled: true
+      size: 100Gi
+      mountPath: /opt/gluesync/data
+    logs:
+      enabled: true
+      size: 10Gi
+      mountPath: /opt/gluesync/logs
+  grafana:
+    enabled: true
     size: 5Gi
+    mountPath: /var/lib/grafana
 ```
 
-3. Upgrade the deployment:
+After changing values, upgrade the release from this chart directory:
 
 ```bash
 helm upgrade gluesync . --namespace gluesync-dev
 ```
 
-## Verifying Volumes
+## Ephemeral Grafana storage
 
-Check mounted volumes:
+If global persistence or Grafana persistence is disabled, the Grafana
+deployment falls back to an `emptyDir` volume. Its data is then lost whenever
+the Pod is replaced.
 
-```bash
-# View volume mounts
-kubectl describe pod -n gluesync-dev -l app.kubernetes.io/name=gluesync-grafana | grep -A 5 "Mounts:"
-
-# Check provisioning content
-kubectl exec -n gluesync-dev deployment/gluesync-gluesync-grafana -- ls -la /etc/grafana/provisioning/
-
-# Check data directory 
-kubectl exec -n gluesync-dev deployment/gluesync-gluesync-grafana -- ls -la /var/lib/grafana/
-```
-
-## Backup and Restore
-
-### Backup Grafana Data
+## Verify storage
 
 ```bash
-# Create backup
-kubectl exec -n gluesync-dev deployment/gluesync-gluesync-grafana -- \
-  tar czf - /var/lib/grafana > grafana-backup-$(date +%Y%m%d).tar.gz
+kubectl get pvc -n gluesync-dev
+kubectl describe pvc gluesync-core-hub -n gluesync-dev
+kubectl describe pod -n gluesync-dev \
+  -l app.kubernetes.io/name=gluesync-grafana
 ```
 
-### Restore Grafana Data
-
-```bash
-# Restore from backup
-kubectl exec -n gluesync-dev deployment/gluesync-gluesync-grafana -- \
-  tar xzf - -C / < grafana-backup-YYYYMMDD.tar.gz
-
-# Restart pod
-kubectl rollout restart deployment/gluesync-gluesync-grafana -n gluesync-dev
-```
-
-## Troubleshooting
-
-### Issue: Grafana loses data after restart
-
-**Cause**: Using emptyDir volume  
-**Solution**: Switch to PersistentVolumeClaim
-
-### Issue: Permission denied errors
-
-**Cause**: Volume permissions don't match Grafana user (UID 472)  
-**Solution**: Add securityContext to deployment:
-
-```yaml
-securityContext:
-  fsGroup: 472
-```
-
-### Issue: PVC not binding
-
-**Cause**: No available storage or wrong storage class  
-**Solution**: Check available storage classes:
+If a claim remains `Pending`, confirm that the configured storage class exists:
 
 ```bash
 kubectl get storageclass
-kubectl describe pvc grafana-data -n gluesync-dev
+kubectl describe pvc -n gluesync-dev
 ```

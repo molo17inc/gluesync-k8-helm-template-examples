@@ -5,7 +5,7 @@ metadata:
   labels:
     app.kubernetes.io/name: {{ include "gluesync.name" . }}-prometheus
     app.kubernetes.io/instance: {{ .Release.Name }}
-    app.kubernetes.io/version: {{ .Chart.AppVersion }}
+    app.kubernetes.io/version: {{ .Values.prometheus.tag }}
     app.kubernetes.io/managed-by: {{ .Release.Service }}
 spec:
   replicas: 1
@@ -21,7 +21,7 @@ spec:
     spec:
       containers:
         - name: prometheus
-          image: "prom/prometheus:latest"
+          image: "{{ .Values.prometheus.image | default "prom/prometheus" }}:{{ .Values.prometheus.tag }}"
           args:
             - "--config.file=/etc/prometheus/prometheus.yml"
             - "--storage.tsdb.path=/prometheus"

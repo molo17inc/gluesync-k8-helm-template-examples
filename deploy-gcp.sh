@@ -23,10 +23,10 @@ if ! kubectl get namespace ${NAMESPACE} &> /dev/null; then
     kubectl create namespace ${NAMESPACE}
 fi
 
-# Check if Traefik CRDs are installed
-echo "Checking for Traefik CRDs..."
-if ! kubectl get crd ingressroutes.traefik.io &> /dev/null; then
-    echo "Traefik CRDs not found. Installing Traefik..."
+# Check if Traefik is installed in the target namespace
+echo "Checking for Traefik..."
+if ! kubectl get deployment traefik -n ${NAMESPACE} &> /dev/null; then
+    echo "Traefik not found in ${NAMESPACE}. Installing Traefik..."
     
     # Add Traefik Helm repository
     helm repo add traefik https://traefik.github.io/charts 2>/dev/null || true
@@ -53,7 +53,7 @@ if ! kubectl get crd ingressroutes.traefik.io &> /dev/null; then
     
     echo "✅ Traefik installed successfully"
 else
-    echo "✅ Traefik CRDs already installed"
+    echo "✅ Traefik already installed"
 fi
 
 # Check if Portainer is installed in the namespace
@@ -75,7 +75,7 @@ if ! kubectl get deployment portainer -n ${NAMESPACE} &> /dev/null; then
     # Install Portainer with LoadBalancer for GKE
     helm upgrade --install portainer portainer/portainer \
         --namespace ${NAMESPACE} \
-        -f $(dirname "$0")/templates/portainer/values.yaml \
+        -f "$(dirname "$0")/portainer-config/values.yaml" \
         --set service.type=LoadBalancer \
         ${PORTAINER_ANNOTATIONS} \
         --wait
@@ -138,10 +138,11 @@ echo ""
 echo "LoadBalancer IP: ${LB_IP}"
 echo ""
 echo "Access your services at:"
-echo "  📍 Corehub HTTPS:  https://${LB_IP}:9443/"
-echo "  📍 Corehub UI:     https://${LB_IP}:9443/ui"
-echo "  📍 Via Ingress:    https://${LB_IP}/"
-echo "  📍 Grafana:        http://${LB_IP}:3000/"
+echo "  📍 Corehub HTTPS:  https://${LB_IP}/"
+echo "  📍 Corehub UI:     https://${LB_IP}/ui"
+echo "  📍 Grafana:        https://${LB_IP}/grafana"
+echo "  📍 Prometheus:     https://${LB_IP}/prometheus"
+echo "  📍 Chronos:        https://${LB_IP}/chronos"
 echo ""
 echo "Note: You may see certificate warnings due to self-signed certificates."
 echo "      This is expected and safe for your deployment."
@@ -150,11 +151,11 @@ echo ""
 # Firewall rule reminder
 echo "🔐 Firewall Configuration:"
 echo "   Ensure your GCP firewall rules allow traffic to these ports:"
-echo "   - TCP: 80, 443, 9443, 3000"
+echo "   - TCP: 80, 443"
 echo ""
 echo "   Example gcloud command to create firewall rule:"
 echo "   gcloud compute firewall-rules create allow-gluesync \\"
-echo "     --allow tcp:80,tcp:443,tcp:9443,tcp:3000 \\"
+echo "     --allow tcp:80,tcp:443 \\"
 echo "     --source-ranges=0.0.0.0/0 \\"
 echo "     --description='Allow Gluesync ports'"
 echo ""

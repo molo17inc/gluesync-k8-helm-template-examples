@@ -5,7 +5,7 @@ metadata:
   labels:
     app.kubernetes.io/name: {{ include "gluesync.name" . }}-chronos
     app.kubernetes.io/instance: {{ .Release.Name }}
-    app.kubernetes.io/version: {{ .Chart.AppVersion }}
+    app.kubernetes.io/version: {{ .Values.gluesyncChronos.tag }}
     app.kubernetes.io/managed-by: {{ .Release.Service }}
 spec:
   replicas: {{ .Values.replicaCount }}
@@ -21,13 +21,13 @@ spec:
     spec:
       containers:
         - name: gluesync-chronos
-          image: "{{ .Values.gluesyncChronos.image }}:{{ .Values.gluesyncChronos.tag | default .Chart.AppVersion }}"
+          image: "{{ .Values.gluesyncChronos.image }}:{{ .Values.gluesyncChronos.tag }}"
           env:
             - name: SSL_ENABLED
               value: "true"
             - name: SSL_SKIP_VERIFY
               value: "true"
-            - name: TIMEZONE
+            - name: TZ
               value: "UTC"
             - name: GLUESYNC_HOST
               value: "https://{{ include "gluesync.fullname" . }}-core-hub:1717"

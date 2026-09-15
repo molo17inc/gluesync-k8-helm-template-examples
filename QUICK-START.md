@@ -29,10 +29,10 @@ Then run: `./port-forward.sh`
 
 - ✅ Traefik Ingress Controller (HTTPS routing to corehub)
 - ✅ Gluesync Core Hub (HTTPS on port 1717)
-- ✅ Source & Target Agents
+- ✅ Chronos
 - ✅ Grafana Monitoring (port 3000)
 - ✅ Prometheus Metrics
-- ✅ All services exposed on ports: 80, 443, 9443, 3000
+- ✅ All application services routed through Traefik on ports 80 and 443
 
 ## Access After Deployment
 
@@ -45,7 +45,7 @@ Then run: `./port-forward.sh`
 ### Cloud (EKS/GKE/AKS)
 The deployment script displays the LoadBalancer address:
 ```
-https://YOUR-LOADBALANCER-ADDRESS:9443/ui
+https://YOUR-LOADBALANCER-ADDRESS/ui
 ```
 
 ## Customization
