@@ -5,7 +5,7 @@ metadata:
   labels:
     app.kubernetes.io/name: {{ include "gluesync.name" . }}-grafana
     app.kubernetes.io/instance: {{ .Release.Name }}
-    app.kubernetes.io/version: {{ .Chart.AppVersion }}
+    app.kubernetes.io/version: {{ .Values.grafana.tag }}
     app.kubernetes.io/managed-by: {{ .Release.Service }}
 spec:
   replicas: 1
@@ -21,7 +21,7 @@ spec:
     spec:
       containers:
         - name: grafana
-          image: "grafana/grafana:latest"
+          image: "{{ .Values.grafana.image | default "grafana/grafana" }}:{{ .Values.grafana.tag }}"
           env:
             - name: GF_SECURITY_ADMIN_USER
               value: "admin"
@@ -38,12 +38,7 @@ spec:
           volumeMounts:
             - name: grafana-datasources
               mountPath: /etc/grafana/provisioning/datasources
-            - name: grafana-dashboard-provider
-              mountPath: /etc/grafana/provisioning/dashboards/dashboard.yml
-              subPath: dashboard.yml
-            - name: grafana-dashboard
-              mountPath: /etc/grafana/provisioning/dashboards/core-hub-metrics.json
-              subPath: core-hub-metrics.json
+            # Dashboards and dashboard provider are baked into the molo17/grafana image
             {{- if and .Values.persistence.enabled .Values.persistence.grafana.enabled }}
             - name: grafana-storage
               mountPath: {{ .Values.persistence.grafana.mountPath | default "/var/lib/grafana" }}
@@ -64,12 +59,7 @@ spec:
         - name: grafana-datasources
           configMap:
             name: grafana-datasources
-        - name: grafana-dashboard-provider
-          configMap:
-            name: grafana-dashboard-provider
-        - name: grafana-dashboard
-          configMap:
-            name: grafana-dashboard
+        # Dashboards and dashboard provider are baked into the molo17/grafana image
         {{- if and .Values.persistence.enabled .Values.persistence.grafana.enabled }}
         - name: grafana-storage
           persistentVolumeClaim:

@@ -5,7 +5,7 @@ metadata:
   labels:
     app.kubernetes.io/name: {{ include "gluesync.name" . }}-grafana
     app.kubernetes.io/instance: {{ .Release.Name }}
-    app.kubernetes.io/version: {{ .Chart.AppVersion }}
+    app.kubernetes.io/version: {{ .Values.grafana.tag }}
     app.kubernetes.io/managed-by: {{ .Release.Service }}
 data:
   datasources.yml: |
@@ -16,28 +16,3 @@ data:
         access: proxy
         url: http://{{ include "gluesync.fullname" . }}-prometheus:9090/prometheus
         isDefault: true
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: grafana-dashboard-provider
-  labels:
-    app.kubernetes.io/name: {{ include "gluesync.name" . }}-grafana
-    app.kubernetes.io/instance: {{ .Release.Name }}
-    app.kubernetes.io/version: {{ .Chart.AppVersion }}
-    app.kubernetes.io/managed-by: {{ .Release.Service }}
-data:
-  dashboard.yml: |
-    apiVersion: 1
-    providers:
-      - name: dashboards
-        orgId: 1
-        folder: ""
-        type: file
-        disableDeletion: false
-        updateIntervalSeconds: 10
-        editable: true
-        allowUiUpdates: true
-        options:
-          path: /etc/grafana/provisioning/dashboards
-          foldersFromFilesStructure: true

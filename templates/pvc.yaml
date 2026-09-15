@@ -15,40 +15,6 @@ spec:
   {{- end }}
 {{- end }}
 
-{{- if and .Values.persistence.enabled .Values.persistence.sourceAgent.enabled .Values.persistence.sourceAgent.data.enabled (and .Values.gluesyncSourceAgent.name (ne .Values.gluesyncSourceAgent.name "")) }}
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: gluesync-{{ .Values.gluesyncSourceAgent.name }}-source-agent
-spec:
-  accessModes:
-    - {{ .Values.persistence.accessMode | default "ReadWriteOnce" }}
-  resources:
-    requests:
-      storage: {{ .Values.persistence.sourceAgent.data.size | default "2Gi" }}
-  {{- if .Values.persistence.storageClass }}
-  storageClassName: {{ .Values.persistence.storageClass | quote }}
-  {{- end }}
-{{- end }}
-
-{{- if and .Values.persistence.enabled .Values.persistence.targetAgent.enabled .Values.persistence.targetAgent.data.enabled (and .Values.gluesyncTargetAgent.name (ne .Values.gluesyncTargetAgent.name "")) }}
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: gluesync-{{ .Values.gluesyncTargetAgent.name }}-target-agent
-spec:
-  accessModes:
-    - {{ .Values.persistence.accessMode | default "ReadWriteOnce" }}
-  resources:
-    requests:
-      storage: {{ .Values.persistence.targetAgent.data.size | default "3Gi" }}
-  {{- if .Values.persistence.storageClass }}
-  storageClassName: {{ .Values.persistence.storageClass | quote }}
-  {{- end }}
-{{- end }}
-
 {{- if and .Values.persistence.enabled .Values.persistence.chronos.enabled .Values.persistence.chronos.data.enabled }}
 ---
 apiVersion: v1
@@ -95,40 +61,6 @@ spec:
   resources:
     requests:
       storage: {{ .Values.persistence.coreHub.logs.size | default "10Gi" }}
-  {{- if .Values.persistence.storageClass }}
-  storageClassName: {{ .Values.persistence.storageClass | quote }}
-  {{- end }}
-{{- end }}
-
-{{- if and .Values.persistence.enabled .Values.persistence.sourceAgent.enabled .Values.persistence.sourceAgent.logs.enabled (and .Values.gluesyncSourceAgent.name (ne .Values.gluesyncSourceAgent.name "")) }}
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: gluesync-{{ .Values.gluesyncSourceAgent.name }}-source-agent-logs
-spec:
-  accessModes:
-    - {{ .Values.persistence.accessMode | default "ReadWriteOnce" }}
-  resources:
-    requests:
-      storage: {{ .Values.persistence.sourceAgent.logs.size | default "10Gi" }}
-  {{- if .Values.persistence.storageClass }}
-  storageClassName: {{ .Values.persistence.storageClass | quote }}
-  {{- end }}
-{{- end }}
-
-{{- if and .Values.persistence.enabled .Values.persistence.targetAgent.enabled .Values.persistence.targetAgent.logs.enabled (and .Values.gluesyncTargetAgent.name (ne .Values.gluesyncTargetAgent.name "")) }}
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: gluesync-{{ .Values.gluesyncTargetAgent.name }}-target-agent-logs
-spec:
-  accessModes:
-    - {{ .Values.persistence.accessMode | default "ReadWriteOnce" }}
-  resources:
-    requests:
-      storage: {{ .Values.persistence.targetAgent.logs.size | default "10Gi" }}
   {{- if .Values.persistence.storageClass }}
   storageClassName: {{ .Values.persistence.storageClass | quote }}
   {{- end }}

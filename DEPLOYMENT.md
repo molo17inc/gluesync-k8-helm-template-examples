@@ -177,7 +177,6 @@ Traefik service automatically configures AWS NLB when using LoadBalancer type:
 ```yaml
 annotations:
   service.beta.kubernetes.io/aws-load-balancer-scheme: "internet-facing"  # or "internal"
-  service.beta.kubernetes.io/aws-load-balancer-scheme: "internet-facing"
   service.beta.kubernetes.io/aws-load-balancer-backend-protocol: "tcp"
 ```
 
@@ -194,8 +193,7 @@ helm install gluesync-prod . \
 ### Security Groups
 
 Ensure your EKS worker nodes' security groups allow:
-
-- Inbound TCP 80, 443, 9443, 3000 from the NLB
+- Inbound TCP 80 and 443 from the NLB
 - The NLB security group allows inbound from your allowed CIDR ranges
 
 ---
@@ -221,7 +219,6 @@ This allows Traefik to communicate with CoreHub and Chronos over HTTPS using sel
 ### Using Custom Certificates
 
 To use your own certificates, update the `secret-tls.yaml` with your cert and key. The certificates are used by:
-
 - **Frontend**: Traefik TLS termination
 - **Backend**: CoreHub, Chronos, and other services
 
@@ -232,16 +229,12 @@ To use your own certificates, update the `secret-tls.yaml` with your cert and ke
 ### LoadBalancer Stuck in Pending
 
 **Problem**: Service stuck in pending state
-
-**Check**:
-
 ```bash
 kubectl describe svc -n gluesync-prod traefik
 ```
 
 **Common causes**:
-
-- EKS: IAM permissions for creating NLB 
+- EKS: IAM permissions for creating NLB
 - GKE: Quota limits on external IPs
 - AKS: Insufficient permissions or quota
 
@@ -252,7 +245,6 @@ kubectl describe svc -n gluesync-prod traefik
 **Problem**: Can connect to LB but connection refused
 
 **Check**:
-
 1. Traefik pods running: `kubectl get pods -n gluesync-prod -l app.kubernetes.io/name=traefik`
 2. IngressRoutes configured: `kubectl get ingressroute -n gluesync-prod`
 3. Security groups allow traffic on ports 80, 443
@@ -264,7 +256,6 @@ kubectl describe svc -n gluesync-prod traefik
 **Problem**: 404 errors when accessing services
 
 **Check**:
-
 1. Traefik CRDs installed: `kubectl get crd ingressroutes.traefik.io`
 2. Middleware exists: `kubectl get middleware -n gluesync-prod`
 3. ServersTransport exists: `kubectl get serverstransport -n gluesync-prod`
@@ -293,4 +284,7 @@ kubectl get ingressroute -n gluesync-prod
 
 # Check Middleware
 kubectl get middleware -n gluesync-prod
+
+# For Local tear down
+kubectl delete namespace gluesync-dev
 ```

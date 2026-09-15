@@ -1,5 +1,4 @@
 apiVersion: v2
 name: gluesync
 description: A Helm chart for Gluesync platform
-version: 0.2.0
-appVersion: "latest"
+version: 0.2.1

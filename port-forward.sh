@@ -46,21 +46,17 @@ if [ -z "$NAMESPACE" ]; then
     fi
 fi
 
-# Start port forwarding for services
-start_port_forward "gluesync" 8080 8080
-start_port_forward "traefik" 8081 9000
+# Start port forwarding for services with stable release-independent names
 start_port_forward "portainer" 9000 9000
-start_port_forward "prometheus" 9090 9090
-start_port_forward "grafana" 3000 3000
 
 echo ""
-echo "Port forwarding started for all services"
+echo "Port forwarding started"
 echo "------------------------------------"
-echo "Gluesync UI:     http://localhost:8080"
-echo "Traefik UI:      http://localhost:8081"
 echo "Portainer:       http://localhost:9000"
-echo "Prometheus:      http://localhost:9090"
-echo "Grafana:         http://localhost:3000"
+echo "Gluesync UI:     https://localhost:9443/ui"
+echo "Grafana:         https://localhost:9443/grafana"
+echo "Prometheus:      https://localhost:9443/prometheus"
+echo "Chronos:         https://localhost:9443/chronos"
 echo ""
 echo "To stop all port forwarding, run: pkill -f \"kubectl port-forward\""
 echo ""

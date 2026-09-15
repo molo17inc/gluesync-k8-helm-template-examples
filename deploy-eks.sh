@@ -23,10 +23,10 @@ if ! kubectl get namespace ${NAMESPACE} &> /dev/null; then
     kubectl create namespace ${NAMESPACE}
 fi
 
-# Check if Traefik CRDs are installed
-echo "Checking for Traefik CRDs..."
-if ! kubectl get crd ingressroutes.traefik.io &> /dev/null; then
-    echo "Traefik CRDs not found. Installing Traefik..."
+# Check if Traefik is installed in the target namespace
+echo "Checking for Traefik..."
+if ! kubectl get deployment traefik -n ${NAMESPACE} &> /dev/null; then
+    echo "Traefik not found in ${NAMESPACE}. Installing Traefik..."
     
     # Add Traefik Helm repository
     helm repo add traefik https://traefik.github.io/charts 2>/dev/null || true
@@ -46,7 +46,7 @@ if ! kubectl get crd ingressroutes.traefik.io &> /dev/null; then
     
     echo "✅ Traefik installed successfully"
 else
-    echo "✅ Traefik CRDs already installed"
+    echo "✅ Traefik already installed"
 fi
 
 # Check if Portainer is installed in the namespace
@@ -61,7 +61,7 @@ if ! kubectl get deployment portainer -n ${NAMESPACE} &> /dev/null; then
     # Install Portainer with LoadBalancer for EKS
     helm upgrade --install portainer portainer/portainer \
         --namespace ${NAMESPACE} \
-        -f $(dirname "$0")/templates/portainer/values.yaml \
+        -f "$(dirname "$0")/portainer-config/values.yaml" \
         --set service.type=LoadBalancer \
         --set service.annotations."service\.beta\.kubernetes\.io/aws-load-balancer-scheme"=${LB_SCHEME} \
         --wait
@@ -117,10 +117,11 @@ echo ""
 echo "LoadBalancer DNS: ${LB_DNS}"
 echo ""
 echo "Access your services at:"
-echo "  📍 Corehub HTTPS:  https://${LB_DNS}:9443/"
-echo "  📍 Corehub UI:     https://${LB_DNS}:9443/ui"
-echo "  📍 Via Ingress:    https://${LB_DNS}/"
-echo "  📍 Grafana:        http://${LB_DNS}:3000/"
+echo "  📍 Corehub HTTPS:  https://${LB_DNS}/"
+echo "  📍 Corehub UI:     https://${LB_DNS}/ui"
+echo "  📍 Grafana:        https://${LB_DNS}/grafana"
+echo "  📍 Prometheus:     https://${LB_DNS}/prometheus"
+echo "  📍 Chronos:        https://${LB_DNS}/chronos"
 echo ""
 echo "Note: You may see certificate warnings due to self-signed certificates."
 echo "      This is expected and safe for your deployment."

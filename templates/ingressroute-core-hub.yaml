@@ -6,7 +6,7 @@ metadata:
   labels:
     app.kubernetes.io/name: {{ include "gluesync.name" . }}-core-hub
     app.kubernetes.io/instance: {{ .Release.Name }}
-    app.kubernetes.io/version: {{ .Chart.AppVersion }}
+    app.kubernetes.io/version: {{ .Values.gluesyncCoreHub.tag }}
     app.kubernetes.io/managed-by: {{ .Release.Service }}
 spec:
   entryPoints:

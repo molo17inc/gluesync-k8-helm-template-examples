@@ -5,7 +5,7 @@ metadata:
   labels:
     app.kubernetes.io/name: {{ include "gluesync.name" . }}-core-hub
     app.kubernetes.io/instance: {{ .Release.Name }}
-    app.kubernetes.io/version: {{ .Chart.AppVersion }}
+    app.kubernetes.io/version: {{ .Values.gluesyncCoreHub.tag }}
     app.kubernetes.io/managed-by: {{ .Release.Service }}
 spec:
   replicas: {{ .Values.replicaCount }}
@@ -21,7 +21,7 @@ spec:
     spec:
       containers:
         - name: gluesync-core-hub
-          image: "{{ .Values.gluesyncCoreHub.image }}:{{ .Chart.AppVersion }}"
+          image: "{{ .Values.gluesyncCoreHub.image }}:{{ .Values.gluesyncCoreHub.tag }}"
           env:
             - name: SSL_ENABLED
               value: "true" # set to true if you want to activate TLS encryption
@@ -31,6 +31,8 @@ spec:
               value: "/opt/gluesync/shared/logback.xml"
             - name: GRAFANA_REMOTE_ADDRESS
               value: "/grafana/d/fecxnzptcq8zkd/core-hub-metrics"
+            - name: TZ
+              value: "UTC"
           ports:
             - containerPort: 1717
               protocol: TCP
