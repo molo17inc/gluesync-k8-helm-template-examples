@@ -68,12 +68,12 @@ After deploying with `deploy-local.sh`, run port forwarding:
 
 Then access services via Traefik:
 
-- **CoreHub**: `https://localhost:9443/`
-- **CoreHub UI**: `https://localhost:9443/ui`
-- **Chronos API**: `https://localhost:9443/api/jobs/` or `https://localhost:9443/chronos/api/jobs`
-- **Chronos UI**: `https://localhost:9443/chronos/`
-- **Grafana**: `https://localhost:9443/grafana`
-- **Prometheus**: `https://localhost:9443/prometheus`
+- **CoreHub**: `https://localhost:8443/`
+- **CoreHub UI**: `https://localhost:8443/ui`
+- **Chronos API**: `https://localhost:8443/chronos/api/jobs`
+- **Chronos UI**: `https://localhost:8443/chronos/`
+- **Grafana**: `https://localhost:8443/grafana`
+- **Prometheus**: `https://localhost:8443/prometheus`
 
 **Note**: Accept certificate warnings (self-signed certificates).
 
@@ -83,7 +83,7 @@ Services are directly accessible via the LoadBalancer IP/DNS through Traefik:
 
 - **CoreHub**: `https://YOUR-LB-ADDRESS/`
 - **CoreHub UI**: `https://YOUR-LB-ADDRESS/ui`
-- **Chronos API**: `https://YOUR-LB-ADDRESS/api/jobs/` or `https://YOUR-LB-ADDRESS/chronos/api/jobs`
+- **Chronos API**: `https://YOUR-LB-ADDRESS/chronos/api/jobs`
 - **Chronos UI**: `https://YOUR-LB-ADDRESS/chronos/`
 - **Grafana**: `https://YOUR-LB-ADDRESS/grafana`
 - **Prometheus**: `https://YOUR-LB-ADDRESS/prometheus`
@@ -126,6 +126,33 @@ helm install gluesync . --namespace gluesync-dev \
 For cloud deployments, adjust the service type and annotations as needed.
 
 ## Configuration
+
+### Image Versions
+
+`values.yaml` uses the `latest` tag for every image. The Kubernetes kit you receive from Gluesync pins real version tags at build time; this public template does not. For anything other than a quick test, pin a specific version.
+
+Set the tags in `values.yaml`:
+
+```yaml
+gluesyncCoreHub:
+  tag: "2.2.6.1"      # Core Hub version
+gluesyncChronos:
+  tag: "<chronos-version>"
+grafana:
+  tag: "<grafana-version>"
+prometheus:
+  tag: "<prometheus-version>"
+```
+
+Or override them on the command line:
+
+```bash
+helm upgrade --install gluesync . --namespace gluesync-dev \
+  --set gluesyncCoreHub.tag=2.2.6.1 \
+  --set gluesyncChronos.tag=<chronos-version>
+```
+
+Available tags are published on Docker Hub under `molo17/gluesync-core-hub`, `molo17/gluesync-chronos`, `molo17/grafana` and `molo17/prometheus`. The templates do not set `imagePullPolicy`, so Kubernetes applies its default: `Always` for `latest`, `IfNotPresent` for a pinned tag. With `latest`, a pod restart can therefore start a newer version.
 
 ### Traefik Routing
 
@@ -195,9 +222,9 @@ kubectl get svc -n gluesync-dev
 
 ### Port Forwarding Issues
 If port forwarding fails:
-1. Check if ports are already in use: `lsof -i :9443`
+1. Check if ports are already in use: `lsof -i :8443`
 2. Ensure the service is running: `kubectl get pods -n gluesync-dev`
-3. Try different ports: `kubectl port-forward ... 19443:9443`
+3. Try different ports: `kubectl port-forward ... 18443:443`
 
 ## Additional Documentation
 

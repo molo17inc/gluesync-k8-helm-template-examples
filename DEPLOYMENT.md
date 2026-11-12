@@ -37,15 +37,15 @@ helm install traefik traefik/traefik \
 helm install gluesync . --namespace gluesync-dev
 
 # 3. Forward ports to localhost
-kubectl port-forward -n gluesync-dev svc/traefik 9443:443
+kubectl port-forward -n gluesync-dev svc/traefik 8443:443
 
 # Access services via Traefik
-# - CoreHub: https://localhost:9443/
-# - CoreHub UI: https://localhost:9443/ui
-# - Chronos API: https://localhost:9443/api/jobs/ or https://localhost:9443/chronos/api/jobs
-# - Chronos UI: https://localhost:9443/chronos/
-# - Grafana: https://localhost:9443/grafana
-# - Prometheus: https://localhost:9443/prometheus
+# - CoreHub: https://localhost:8443/
+# - CoreHub UI: https://localhost:8443/ui
+# - Chronos API: https://localhost:8443/chronos/api/jobs
+# - Chronos UI: https://localhost:8443/chronos/
+# - Grafana: https://localhost:8443/grafana
+# - Prometheus: https://localhost:8443/prometheus
 ```
 
 **Why port-forward?**
@@ -87,7 +87,7 @@ export LB_DNS=$(kubectl get svc -n gluesync-prod traefik -o jsonpath='{.status.l
 echo "Access your services via Traefik at:"
 echo "  - CoreHub: https://${LB_DNS}/"
 echo "  - CoreHub UI: https://${LB_DNS}/ui"
-echo "  - Chronos API: https://${LB_DNS}/api/jobs/"
+echo "  - Chronos API: https://${LB_DNS}/chronos/api/jobs"
 echo "  - Chronos UI: https://${LB_DNS}/chronos/"
 echo "  - Grafana: https://${LB_DNS}/grafana"
 echo "  - Prometheus: https://${LB_DNS}/prometheus"
@@ -115,13 +115,6 @@ Gluesync uses Traefik IngressRoutes for advanced routing:
 - match: PathPrefix(`/chronos`)
   middlewares:
     - name: gluesync-chronos  # Strips /chronos prefix
-  services:
-    - name: gluesync-chronos
-      port: 1717
-      scheme: https
-
-# IngressRoute for direct API access (priority: 5)
-- match: PathPrefix(`/api/`)
   services:
     - name: gluesync-chronos
       port: 1717

@@ -49,30 +49,6 @@ else
     echo "✅ Traefik already installed"
 fi
 
-# Check if Portainer is installed in the namespace
-echo "Checking for Portainer..."
-if ! kubectl get deployment portainer -n ${NAMESPACE} &> /dev/null; then
-    echo "Portainer not found. Installing Portainer..."
-
-    # Add Portainer Helm repository
-    helm repo add portainer https://portainer.github.io/k8s/ 2>/dev/null || true
-    helm repo update
-
-    # Install Portainer with our custom values (from portainer-config directory, NOT templates)
-    helm upgrade --install portainer portainer/portainer \
-        --namespace ${NAMESPACE} \
-        -f $(dirname "$0")/portainer-config/values.yaml
-
-    echo "✅ Portainer installation started (running in background)"
-    echo ""
-    echo "To access Portainer UI:"
-    echo "  http://localhost:30900 (via NodePort)"
-    echo "  or use port-forward: kubectl port-forward -n ${NAMESPACE} svc/portainer 9000:9000"
-    echo ""
-else
-    echo "✅ Portainer already installed"
-fi
-
 # Install or upgrade with NodePort
 echo ""
 echo "Deploying Gluesync with NodePort service..."
@@ -110,22 +86,22 @@ echo ""
 echo "To access services from your localhost, you need to use port forwarding:"
 echo ""
 echo "Option 1: Use the convenience script (recommended)"
-echo "  ./port-forward.sh              # Port 9443 only"
-echo "  sudo ./port-forward.sh         # All ports (443, 80, 9443)"
+echo "  ./port-forward.sh              # Port 8443 only"
+echo "  sudo ./port-forward.sh         # All ports (443, 80, 8443)"
 echo ""
 echo "Option 2: Manual port forwarding"
 echo "  # Without privileged ports:"
-echo "  kubectl port-forward -n ${NAMESPACE} svc/traefik 9443:443"
+echo "  kubectl port-forward -n ${NAMESPACE} svc/traefik 8443:443"
 echo ""
 echo "  # With privileged ports (requires sudo):"
-echo "  sudo kubectl port-forward -n ${NAMESPACE} svc/traefik 9443:443 443:443 80:80"
+echo "  sudo kubectl port-forward -n ${NAMESPACE} svc/traefik 8443:443 443:443 80:80"
 echo ""
 echo "Once port forwarding is active, access your services at:"
-echo "  📍 Corehub HTTPS:  https://localhost:9443/"
-echo "  📍 Corehub UI:     https://localhost:9443/ui"
-echo "  📍 Grafana:        https://localhost:9443/grafana"
-echo "  📍 Prometheus:     https://localhost:9443/prometheus"
-echo "  📍 Chronos:        https://localhost:9443/chronos"
+echo "  📍 Corehub HTTPS:  https://localhost:8443/"
+echo "  📍 Corehub UI:     https://localhost:8443/ui"
+echo "  📍 Grafana:        https://localhost:8443/grafana"
+echo "  📍 Prometheus:     https://localhost:8443/prometheus"
+echo "  📍 Chronos:        https://localhost:8443/chronos"
 echo "  📍 Via Ingress:    https://localhost:443/ (requires sudo)"
 echo ""
 echo "Note: Accept certificate warnings (self-signed certificates)"
