@@ -49,32 +49,6 @@ else
     echo "✅ Traefik already installed"
 fi
 
-# Check if Portainer is installed in the namespace
-echo "Checking for Portainer..."
-if ! kubectl get deployment portainer -n ${NAMESPACE} &> /dev/null; then
-    echo "Portainer not found. Installing Portainer..."
-    
-    # Add Portainer Helm repository
-    helm repo add portainer https://portainer.github.io/k8s/ 2>/dev/null || true
-    helm repo update
-    
-    # Install Portainer with LoadBalancer for EKS
-    helm upgrade --install portainer portainer/portainer \
-        --namespace ${NAMESPACE} \
-        -f "$(dirname "$0")/portainer-config/values.yaml" \
-        --set service.type=LoadBalancer \
-        --set service.annotations."service\.beta\.kubernetes\.io/aws-load-balancer-scheme"=${LB_SCHEME} \
-        --wait
-    
-    echo "✅ Portainer installed successfully"
-    echo ""
-    echo "To access Portainer UI, wait for the LoadBalancer to be provisioned, then run:"
-    echo "  kubectl get svc -n ${NAMESPACE} portainer -o jsonpath='{.status.loadBalancer.ingress[0].hostname}'"
-    echo ""
-else
-    echo "✅ Portainer already installed"
-fi
-
 # Install or upgrade
 echo ""
 echo "Deploying Gluesync with LoadBalancer service..."

@@ -39,7 +39,7 @@ Then run: `./port-forward.sh`
 ### Local
 ```bash
 ./port-forward.sh
-# Then open: https://localhost:9443/ui
+# Then open: https://localhost:8443/ui
 ```
 
 ### Cloud (EKS/GKE/AKS)

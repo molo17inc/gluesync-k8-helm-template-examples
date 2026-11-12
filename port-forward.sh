@@ -3,19 +3,6 @@
 # Gluesync Port Forwarding Script
 # This script forwards the Kubernetes services to localhost for easy access
 
-# Function to start port forwarding
-start_port_forward() {
-    local service=$1
-    local port=$2
-    local target_port=$3
-    
-    # Kill any existing port-forward for this service
-    pkill -f "kubectl port-forward.*${service}" || true
-    
-    echo "Forwarding ${service} to http://localhost:${port}"
-    nohup kubectl port-forward -n ${NAMESPACE} svc/${service} ${port}:${target_port} > /dev/null 2>&1 &
-}
-
 # Auto-detect namespace or use environment variable
 NAMESPACE="${NAMESPACE:-}"
 if [ -z "$NAMESPACE" ]; then
@@ -46,17 +33,13 @@ if [ -z "$NAMESPACE" ]; then
     fi
 fi
 
-# Start port forwarding for services with stable release-independent names
-start_port_forward "portainer" 9000 9000
-
 echo ""
 echo "Port forwarding started"
 echo "------------------------------------"
-echo "Portainer:       http://localhost:9000"
-echo "Gluesync UI:     https://localhost:9443/ui"
-echo "Grafana:         https://localhost:9443/grafana"
-echo "Prometheus:      https://localhost:9443/prometheus"
-echo "Chronos:         https://localhost:9443/chronos"
+echo "Gluesync UI:     https://localhost:8443/ui"
+echo "Grafana:         https://localhost:8443/grafana"
+echo "Prometheus:      https://localhost:8443/prometheus"
+echo "Chronos:         https://localhost:8443/chronos"
 echo ""
 echo "To stop all port forwarding, run: pkill -f \"kubectl port-forward\""
 echo ""
@@ -67,12 +50,12 @@ if [ "$EUID" -ne 0 ]; then
     echo "   To include them, run: sudo ./port-forward.sh"
     echo ""
     kubectl port-forward -n ${NAMESPACE} svc/traefik \
-      9443:443
+      8443:443
 else
     echo "✅ Running with sudo - all ports will be forwarded"
     echo ""
     kubectl port-forward -n ${NAMESPACE} svc/traefik \
-      9443:443 \
+      8443:443 \
       443:443 \
       80:80
 fi
