@@ -7,8 +7,12 @@ metadata:
     app.kubernetes.io/instance: {{ .Release.Name }}
     app.kubernetes.io/version: {{ .Values.grafana.tag }}
     app.kubernetes.io/managed-by: {{ .Release.Service }}
+    com.molo17.conductor.type: module
 spec:
   replicas: 1
+  # Recreate: the RWO volume cannot follow a second pod started beside the old one.
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app.kubernetes.io/name: {{ include "gluesync.name" . }}-grafana
@@ -21,7 +25,7 @@ spec:
     spec:
       containers:
         - name: grafana
-          image: "{{ .Values.grafana.image | default "grafana/grafana" }}:{{ .Values.grafana.tag }}"
+          image: {{ include "gluesync.image" (dict "ctx" . "kind" "Deployment" "name" (printf "%s-grafana" (include "gluesync.fullname" .)) "container" "grafana" "image" (.Values.grafana.image | default "grafana/grafana") "tag" .Values.grafana.tag) | quote }}
           env:
             - name: GF_SECURITY_ADMIN_USER
               value: "admin"

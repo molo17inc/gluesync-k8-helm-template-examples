@@ -12,6 +12,10 @@ spec:
       protocol: TCP
       port: 1717
       targetPort: 1717
+    - name: http-8090
+      protocol: TCP
+      port: 8090
+      targetPort: 8090
   selector:
     app.kubernetes.io/name: {{ include "gluesync.name" . }}-core-hub
     app.kubernetes.io/instance: {{ .Release.Name }}

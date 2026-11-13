@@ -10,3 +10,21 @@
 {{- printf "%s-%s" .Release.Name $name | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
 {{- end -}}
+
+{{- /*
+gluesync.image: the image of a workload's container. With the Gluesync Kubernetes
+Operator (GKO) on, the tag GKO set wins over values.yaml, so `helm upgrade` never reverts an
+update. Args: dict "ctx" . "kind" "StatefulSet" "name" <workload> "container" <name> "image" <repo> "tag" <tag>
+*/ -}}
+{{- define "gluesync.image" -}}
+{{- $img := printf "%s:%s" .image (toString .tag) -}}
+{{- if .ctx.Values.operator.enabled -}}
+{{- $live := lookup "apps/v1" .kind .ctx.Release.Namespace .name -}}
+{{- if $live -}}
+{{- range $live.spec.template.spec.containers -}}
+{{- if eq .name $.container -}}{{- $img = .image -}}{{- end -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}
+{{- $img -}}
+{{- end -}}

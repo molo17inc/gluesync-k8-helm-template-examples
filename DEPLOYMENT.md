@@ -29,8 +29,9 @@ Port forwarding is required to access services from localhost:
 # 1. Install Traefik first
 helm repo add traefik https://traefik.github.io/charts
 helm install traefik traefik/traefik \
+  --version 42.3.2 \
   --namespace gluesync-dev --create-namespace \
-  --set service.type=NodePort \
+  --set service.spec.type=NodePort \
   --set providers.kubernetesCRD.enabled=true
 
 # 2. Install Gluesync
@@ -70,8 +71,9 @@ Services are **automatically accessible** via the LoadBalancer's external IP/DNS
 # 1. Install Traefik with LoadBalancer
 helm repo add traefik https://traefik.github.io/charts
 helm install traefik traefik/traefik \
+  --version 42.3.2 \
   --namespace gluesync-prod --create-namespace \
-  --set service.type=LoadBalancer \
+  --set service.spec.type=LoadBalancer \
   --set service.annotations."service\.beta\.kubernetes\.io/aws-load-balancer-scheme"=internet-facing \
   --set providers.kubernetesCRD.enabled=true
 
@@ -155,6 +157,7 @@ spec:
 |------|---------|----------|-------------|
 | 443 | Traefik HTTPS | TCP | Main HTTPS entry point (all services) |
 | 80 | Traefik HTTP | TCP | HTTP entry point (redirects to HTTPS) |
+| 8090 | Traefik Courier | TCP | HTTPS entry point of the Courier inbound endpoints (`/api-inbound/`), forwarded to the HTTP Source agent in Core Hub |
 | 1717 | Backend Services | TCP | Internal HTTPS for CoreHub/Chronos |
 | 3000 | Grafana | TCP | Grafana monitoring interface |
 | 9090 | Prometheus | TCP | Prometheus metrics |
@@ -240,7 +243,7 @@ kubectl describe svc -n gluesync-prod traefik
 **Check**:
 1. Traefik pods running: `kubectl get pods -n gluesync-prod -l app.kubernetes.io/name=traefik`
 2. IngressRoutes configured: `kubectl get ingressroute -n gluesync-prod`
-3. Security groups allow traffic on ports 80, 443
+3. Security groups allow traffic on ports 80, 443 and 8090 (Courier)
 
 ---
 

@@ -6,6 +6,8 @@
 set -e
 
 NAMESPACE="${NAMESPACE:-gluesync-dev}"
+# Traefik chart tested with these flags (40.0.0 moved the service type to service.spec.type)
+TRAEFIK_CHART_VERSION="${TRAEFIK_CHART_VERSION:-42.3.2}"
 RELEASE_NAME="${RELEASE_NAME:-gluesync}"
 
 echo "=========================================="
@@ -33,15 +35,22 @@ if ! kubectl get deployment traefik -n ${NAMESPACE} &> /dev/null; then
     
     # Install Traefik with minimal configuration
     helm upgrade --install traefik traefik/traefik \
+        --version ${TRAEFIK_CHART_VERSION} \
         --namespace ${NAMESPACE} \
         --set deployment.kind=Deployment \
-        --set service.type=NodePort \
+        --set service.spec.type=NodePort \
         --set ports.websecure.nodePort=32443 \
         --set ports.web.nodePort=32080 \
         --set ingressClass.enabled=true \
         --set ingressClass.isDefaultClass=false \
         --set providers.kubernetesCRD.enabled=true \
         --set providers.kubernetesIngress.enabled=true \
+        --set ports.courier.port=8090 \
+        --set ports.courier.expose.default=true \
+        --set ports.courier.exposedPort=8090 \
+        --set ports.courier.protocol=TCP \
+        --set ports.courier.http.tls.enabled=true \
+        --set ports.courier.nodePort=32090 \
         --wait
     
     echo "✅ Traefik installed successfully"

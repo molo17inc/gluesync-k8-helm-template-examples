@@ -32,6 +32,7 @@ Then run: `./port-forward.sh`
 - ✅ Chronos
 - ✅ Grafana Monitoring (port 3000)
 - ✅ Prometheus Metrics
+- ✅ Gluesync Kubernetes Operator (GKO): updates Gluesync from the Core Hub UI (`kubectl get gsp` shows the version)
 - ✅ All application services routed through Traefik on ports 80 and 443
 
 ## Access After Deployment

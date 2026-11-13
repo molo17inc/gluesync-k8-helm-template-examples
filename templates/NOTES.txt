@@ -1,0 +1,13 @@
+Gluesync {{ .Values.gluesyncCoreHub.tag }} is installed in namespace {{ .Release.Namespace }}.
+{{- if .Values.operator.enabled }}
+
+The Gluesync Kubernetes Operator (GKO) {{ .Values.operator.tag }} manages updates:
+Core Hub's Update button works as on Docker. Follow the platform with:
+
+  kubectl -n {{ .Release.Namespace }} get gsp
+  kubectl -n {{ .Release.Namespace }} describe gsp gluesync
+{{- else }}
+
+The Gluesync Kubernetes Operator (GKO) is off (operator.enabled=false): update
+Gluesync by changing the image tags in values.yaml and running helm upgrade.
+{{- end }}

@@ -114,8 +114,9 @@ If you prefer manual deployment, you must install Traefik first:
 helm repo add traefik https://traefik.github.io/charts
 helm repo update
 helm install traefik traefik/traefik \
+  --version 42.3.2 \
   --namespace gluesync-dev --create-namespace \
-  --set service.type=NodePort \
+  --set service.spec.type=NodePort \
   --set providers.kubernetesCRD.enabled=true
 
 # 2. Deploy Gluesync
@@ -125,11 +126,35 @@ helm install gluesync . --namespace gluesync-dev \
 
 For cloud deployments, adjust the service type and annotations as needed.
 
+## Updating Gluesync
+
+The chart installs the Gluesync Kubernetes Operator (GKO) next to Core Hub. It does on Kubernetes what Conductor does on Docker and Swarm:
+
+1. Core Hub's **Update** button works as on Docker: GKO answers on `/conductor/api` and connects to Core Hub as its Conductor module.
+2. Before Core Hub changes, every running pipeline goes into maintenance mode. Pipelines resume as soon as the new Core Hub is ready, or after a rollback.
+3. Core Hub is updated first and must stay ready for 20 s (180 s at most). If it fails, it is rolled back.
+4. Chronos, Grafana and Prometheus then move to the latest version of the release channel. A module that fails is rolled back on its own.
+
+To update from the command line or from Git, change the desired version:
+
+```bash
+kubectl -n gluesync-dev patch gluesyncplatform gluesync --type merge -p '{"spec":{"version":"2.3.3.0"}}'
+kubectl -n gluesync-dev get gluesyncplatform gluesync -w
+```
+
+`kubectl get gsp` shows the running version, the desired version, the version available on the channel and the phase (`Current`, `UpdateAvailable`, `Updating`, `Degraded`, `Failed`). `kubectl describe gsp gluesync` lists each step as an event.
+
+Set `operator.updatePolicy=gitops` if versions live in Git: the UI then cannot start updates. A later `helm upgrade` of this chart never reverts an update: the image tags GKO set are kept.
+
+GKO signs in to Core Hub with your licence (`secrets.license`) and serves its API with the Gluesync certificate (`secrets.cert`, `secrets.key`). This public chart leaves those values blank: set them, for example with `--set-file`, before you install.
+
+To install without GKO: `--set operator.enabled=false`. Core Hub then cannot update itself from the UI: change the image tags in `values.yaml` and run `helm upgrade`.
+
 ## Configuration
 
 ### Image Versions
 
-`values.yaml` uses the `latest` tag for every image. The Kubernetes kit you receive from Gluesync pins real version tags at build time; this public template does not. For anything other than a quick test, pin a specific version.
+`values.yaml` uses the `latest` tag for every image. The Kubernetes kit you receive from Gluesync pins real version tags at build time; this public template does not. For anything other than a quick test, pin a specific version. Once GKO is running, it owns the versions: a later `helm upgrade` keeps the tags GKO set (see [Updating Gluesync](#updating-gluesync)).
 
 Set the tags in `values.yaml`:
 
@@ -142,6 +167,8 @@ grafana:
   tag: "<grafana-version>"
 prometheus:
   tag: "<prometheus-version>"
+operator:
+  tag: "0.1.1"          # Gluesync Kubernetes Operator (GKO)
 ```
 
 Or override them on the command line:
@@ -152,7 +179,7 @@ helm upgrade --install gluesync . --namespace gluesync-dev \
   --set gluesyncChronos.tag=<chronos-version>
 ```
 
-Available tags are published on Docker Hub under `molo17/gluesync-core-hub`, `molo17/gluesync-chronos`, `molo17/grafana` and `molo17/prometheus`. The templates do not set `imagePullPolicy`, so Kubernetes applies its default: `Always` for `latest`, `IfNotPresent` for a pinned tag. With `latest`, a pod restart can therefore start a newer version.
+Available tags are published on Docker Hub under `molo17/gluesync-core-hub`, `molo17/gluesync-chronos`, `molo17/grafana`, `molo17/prometheus` and `molo17/gluesync-operator` (GKO). The templates do not set `imagePullPolicy`, so Kubernetes applies its default: `Always` for `latest`, `IfNotPresent` for a pinned tag. With `latest`, a pod restart can therefore start a newer version. GKO also reports `latest` as the running version in `kubectl get gsp` until you pin one.
 
 ### Traefik Routing
 
@@ -169,6 +196,7 @@ Gluesync uses Traefik IngressRoutes for advanced routing:
 |------|---------|----------|-------------|
 | 443 | Traefik HTTPS | TCP | Main HTTPS entry point (Traefik) |
 | 80 | Traefik HTTP | TCP | HTTP entry point (redirects to HTTPS) |
+| 8090 | Traefik Courier | TCP | HTTPS entry point of the Courier inbound endpoints (`/api-inbound/`), forwarded to the HTTP Source agent in Core Hub |
 | 1717 | Backend Services | TCP | Internal HTTPS for CoreHub/Chronos |
 | 3000 | Grafana | TCP | Monitoring dashboard |
 | 9090 | Prometheus | TCP | Metrics collection |
@@ -182,12 +210,12 @@ Gluesync uses Traefik IngressRoutes for advanced routing:
 ## Firewall Configuration
 
 ### AWS EKS
-Ensure your security groups allow inbound traffic on ports 80 and 443.
+Ensure your security groups allow inbound traffic on ports 80, 443 and 8090 (Courier inbound endpoints).
 
 ### Google GKE
 ```bash
 gcloud compute firewall-rules create allow-gluesync \
-  --allow tcp:80,tcp:443 \
+  --allow tcp:80,tcp:443,tcp:8090 \
   --source-ranges=0.0.0.0/0
 ```
 
@@ -198,7 +226,7 @@ az network nsg rule create \
   --nsg-name <your-nsg> \
   --name allow-gluesync \
   --priority 100 \
-  --destination-port-ranges 80 443 \
+  --destination-port-ranges 80 443 8090 \
   --access Allow \
   --protocol Tcp
 ```
