@@ -15,14 +15,27 @@
 gluesync.image: the image of a workload's container. With the Gluesync Kubernetes
 Operator (GKO) on, the tag GKO set wins over values.yaml, so `helm upgrade` never reverts an
 update. Args: dict "ctx" . "kind" "StatefulSet" "name" <workload> "container" <name> "image" <repo> "tag" <tag>
+Optional "newerTagWins" true: a values.yaml tag that is a higher X.Y.Z than the live
+one still wins (GKO's own image: a newer kit upgrades GKO, an older one never
+downgrades the version GKO moved itself to).
 */ -}}
 {{- define "gluesync.image" -}}
 {{- $img := printf "%s:%s" .image (toString .tag) -}}
 {{- if .ctx.Values.operator.enabled -}}
 {{- $live := lookup "apps/v1" .kind .ctx.Release.Namespace .name -}}
 {{- if $live -}}
+{{- $liveImg := "" -}}
 {{- range $live.spec.template.spec.containers -}}
-{{- if eq .name $.container -}}{{- $img = .image -}}{{- end -}}
+{{- if eq .name $.container -}}{{- $liveImg = .image -}}{{- end -}}
+{{- end -}}
+{{- if $liveImg -}}
+{{- $keep := true -}}
+{{- if .newerTagWins -}}
+{{- $want := regexFind "^[0-9]+\\.[0-9]+\\.[0-9]+" (toString .tag) -}}
+{{- $have := regexFind "^[0-9]+\\.[0-9]+\\.[0-9]+" (last (splitList ":" $liveImg)) -}}
+{{- if and $want $have (semverCompare (printf ">%s" $have) $want) -}}{{- $keep = false -}}{{- end -}}
+{{- end -}}
+{{- if $keep -}}{{- $img = $liveImg -}}{{- end -}}
 {{- end -}}
 {{- end -}}
 {{- end -}}
