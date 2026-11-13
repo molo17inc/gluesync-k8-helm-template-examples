@@ -116,6 +116,15 @@ operator:
   image: "molo17/gluesync-operator"
   tag: "latest" # pin a release for anything but a quick test (see README)
   updatePolicy: ui # ui | gitops (gitops: the UI cannot start updates; change spec.version in Git)
+  # GKO's own update. GKO lists itself in the Core Hub UI and, when it is updated
+  # (or Core Hub is, and GKO is not pinned), changes its own image last, once no
+  # update has run for delaySeconds. Never with updatePolicy gitops: Git sets
+  # operator.tag. enabled: false leaves GKO's image to helm upgrade.
+  selfUpdate:
+    enabled: true
+    delaySeconds: 15
+    # Kubernetes marks GKO's rollout failed after this; the old pod then rolls back.
+    progressDeadlineSeconds: 300
   stability:
     windowSeconds: 20
     maxWaitSeconds: 180

@@ -39,6 +39,10 @@ rules:
   - apiGroups: ["", events.k8s.io]
     resources: [events]
     verbs: [create, patch]
+  # Leader election: during GKO's own update the old and the new pod run side by side.
+  - apiGroups: [coordination.k8s.io]
+    resources: [leases]
+    verbs: [get, create, update]
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
@@ -66,10 +70,22 @@ metadata:
     app.kubernetes.io/instance: {{ .Release.Name }}
     app.kubernetes.io/version: {{ .Values.operator.tag | quote }}
     app.kubernetes.io/managed-by: {{ .Release.Service }}
+    # GKO finds its own Deployment by this label: it lists itself in the Core Hub
+    # UI and updates itself last, after every other component.
+    com.molo17.conductor.type: operator
 spec:
   replicas: 1
+  # GKO's own update: the new pod starts next to the old one, which keeps the
+  # leader lease, and can put its own image back, until the new pod has been
+  # Ready for minReadySeconds. A new GKO that never gets there is rolled back by
+  # the old one; one that breaks later: kubectl rollout undo deployment/<name>.
   strategy:
-    type: Recreate
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  minReadySeconds: 10
+  progressDeadlineSeconds: {{ .Values.operator.selfUpdate.progressDeadlineSeconds }}
   selector:
     matchLabels:
       app.kubernetes.io/name: {{ include "gluesync.name" . }}-operator
@@ -87,17 +103,23 @@ spec:
           type: RuntimeDefault
       containers:
         - name: gluesync-operator
-          image: "{{ .Values.operator.image }}:{{ .Values.operator.tag }}"
+          image: {{ include "gluesync.image" (dict "ctx" . "kind" "Deployment" "name" $op "container" "gluesync-operator" "image" .Values.operator.image "tag" .Values.operator.tag "newerTagWins" true) | quote }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           args:
             - --platform=gluesync
             - --tls-cert=/tls/tls.crt
             - --tls-key=/tls/tls.key
+            - --leader-elect
           env:
             - name: POD_NAMESPACE
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.namespace
+            # GKO's own update; env, not flags: an older GKO ignores them.
+            - name: GKO_SELF_UPDATE
+              value: {{ .Values.operator.selfUpdate.enabled | quote }}
+            - name: GKO_SELF_UPDATE_DELAY
+              value: "{{ .Values.operator.selfUpdate.delaySeconds }}s"
             - name: TZ
               value: "UTC"
           ports:
@@ -109,6 +131,7 @@ spec:
             httpGet:
               path: /readyz
               port: probes
+            periodSeconds: 5
           livenessProbe:
             httpGet:
               path: /healthz

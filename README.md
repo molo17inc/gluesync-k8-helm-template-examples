@@ -134,6 +134,7 @@ The chart installs the Gluesync Kubernetes Operator (GKO) next to Core Hub. It d
 2. Before Core Hub changes, every running pipeline goes into maintenance mode. Pipelines resume as soon as the new Core Hub is ready, or after a rollback.
 3. Core Hub is updated first and must stay ready for 20 s (180 s at most). If it fails, it is rolled back.
 4. Chronos, Grafana and Prometheus then move to the latest version of the release channel. A module that fails is rolled back on its own.
+5. GKO updates itself last. The UI lists it as a module; its version comes from the release channel set in Core Hub. GKO answers the update first, then waits until no update has run for 15 s (`operator.selfUpdate.delaySeconds`) and changes its own image. The new GKO pod starts next to the old one, which keeps running until the new pod has been Ready for 10 s. If the new pod crashes, cannot be pulled or is not ready within 180 s, the old GKO puts its own image back. A new GKO that fails after taking over cannot roll itself back: `kubectl -n <namespace> rollout undo deployment/<release>-gluesync-operator`.
 
 To update from the command line or from Git, change the desired version:
 
@@ -144,7 +145,7 @@ kubectl -n gluesync-dev get gluesyncplatform gluesync -w
 
 `kubectl get gsp` shows the running version, the desired version, the version available on the channel and the phase (`Current`, `UpdateAvailable`, `Updating`, `Degraded`, `Failed`). `kubectl describe gsp gluesync` lists each step as an event.
 
-Set `operator.updatePolicy=gitops` if versions live in Git: the UI then cannot start updates. A later `helm upgrade` of this chart never reverts an update: the image tags GKO set are kept.
+Set `operator.updatePolicy=gitops` if versions live in Git: the UI then cannot start updates, and GKO never changes its own image (set `operator.tag` in Git). A later `helm upgrade` of this chart never reverts an update: the image tags GKO set are kept. For GKO itself, a chart whose `operator.tag` is a newer version than the one running still upgrades it.
 
 GKO signs in to Core Hub with your licence (`secrets.license`) and serves its API with the Gluesync certificate (`secrets.cert`, `secrets.key`). This public chart leaves those values blank: set them, for example with `--set-file`, before you install.
 
