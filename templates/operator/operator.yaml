@@ -36,6 +36,15 @@ rules:
     resources: [secrets]
     resourceNames: [{{ printf "%s-shared" $fullname | quote }}]
     verbs: [get]
+  # Courier inbound heal: GKO adds the port 8090 of Core Hub's Service and the
+  # IngressRoute of /api-inbound/ to an install that lacks them (patches Traefik's
+  # Deployment and Service with the rules above and these).
+  - apiGroups: [""]
+    resources: [services]
+    verbs: [get, list, watch, patch]
+  - apiGroups: [traefik.io]
+    resources: [ingressroutes]
+    verbs: [get, list, watch, create]
   - apiGroups: ["", events.k8s.io]
     resources: [events]
     verbs: [create, patch]
