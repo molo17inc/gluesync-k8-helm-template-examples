@@ -107,3 +107,27 @@ secrets:
   logback: "" # logback.xml content
   cert: "" # gluesync-cert.pem content
   key: "" # gluesync-key.pem content
+
+# Gluesync Kubernetes Operator (GKO): updates Core Hub and the modules from the Core Hub
+# UI (it takes Conductor's place on Kubernetes) or when spec.version of the GluesyncPlatform
+# changes. Pipelines go into maintenance mode while Core Hub changes.
+operator:
+  enabled: true
+  image: "molo17/gluesync-operator"
+  tag: "latest" # pin a release for anything but a quick test (see README)
+  updatePolicy: ui # ui | gitops (gitops: the UI cannot start updates; change spec.version in Git)
+  stability:
+    windowSeconds: 20
+    maxWaitSeconds: 180
+  maintenance:
+    disabled: false
+    drainTimeoutSeconds: 600
+  resources:
+    requests:
+      cpu: "50m"
+      memory: "64Mi"
+      ephemeral-storage: "32Mi"
+    limits:
+      cpu: "500m"
+      memory: "256Mi"
+      ephemeral-storage: "256Mi" # container logs count against it

@@ -7,6 +7,7 @@ metadata:
     app.kubernetes.io/instance: {{ .Release.Name }}
     app.kubernetes.io/version: {{ .Values.gluesyncChronos.tag }}
     app.kubernetes.io/managed-by: {{ .Release.Service }}
+    com.molo17.conductor.type: module
 spec:
   replicas: {{ .Values.replicaCount }}
   selector:
@@ -21,7 +22,7 @@ spec:
     spec:
       containers:
         - name: gluesync-chronos
-          image: "{{ .Values.gluesyncChronos.image }}:{{ .Values.gluesyncChronos.tag }}"
+          image: {{ include "gluesync.image" (dict "ctx" . "kind" "StatefulSet" "name" (printf "%s-chronos" (include "gluesync.fullname" .)) "container" "gluesync-chronos" "image" .Values.gluesyncChronos.image "tag" .Values.gluesyncChronos.tag) | quote }}
           env:
             - name: SSL_ENABLED
               value: "true"
@@ -34,6 +35,13 @@ spec:
           ports:
             - containerPort: 1717
               protocol: TCP
+          readinessProbe:
+            tcpSocket: { port: 1717 }
+            periodSeconds: 5
+          livenessProbe:
+            tcpSocket: { port: 1717 }
+            initialDelaySeconds: 60
+            periodSeconds: 20
           resources:
             limits:
               cpu: {{ .Values.resources.gluesyncChronos.limits.cpu }}

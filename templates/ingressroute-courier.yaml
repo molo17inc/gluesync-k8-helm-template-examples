@@ -1,0 +1,24 @@
+# Courier inbound endpoints: Traefik's `courier` entry point (HTTPS on 8090, see the deploy-*.sh
+# Traefik install) forwards /api-inbound/ to the HTTP Source agent inside Core Hub over plain HTTP.
+# Set the agent to inboundPort 8090 and inboundAllowPlainHttp true: TLS ends at Traefik.
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: {{ include "gluesync.fullname" . }}-courier
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: {{ include "gluesync.name" . }}-courier
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/version: {{ .Values.gluesyncCoreHub.tag }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+spec:
+  entryPoints:
+    - courier
+  routes:
+    - match: PathPrefix(`/api-inbound/`)
+      kind: Rule
+      services:
+        - name: {{ include "gluesync.fullname" . }}-core-hub
+          port: 8090
+          scheme: http
+  tls: {}

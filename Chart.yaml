@@ -1,4 +1,4 @@
 apiVersion: v2
 name: gluesync
-description: A Helm chart for Gluesync platform
-version: 0.2.1
+description: A Helm chart for the Gluesync platform, with the Gluesync Kubernetes Operator (GKO) for updates
+version: 0.3.0

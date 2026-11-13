@@ -7,8 +7,12 @@ metadata:
     app.kubernetes.io/instance: {{ .Release.Name }}
     app.kubernetes.io/version: {{ .Values.prometheus.tag }}
     app.kubernetes.io/managed-by: {{ .Release.Service }}
+    com.molo17.conductor.type: module
 spec:
   replicas: 1
+  # Recreate: the RWO volume cannot follow a second pod started beside the old one.
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app.kubernetes.io/name: {{ include "gluesync.name" . }}-prometheus
@@ -21,7 +25,7 @@ spec:
     spec:
       containers:
         - name: prometheus
-          image: "{{ .Values.prometheus.image | default "prom/prometheus" }}:{{ .Values.prometheus.tag }}"
+          image: {{ include "gluesync.image" (dict "ctx" . "kind" "Deployment" "name" (printf "%s-prometheus" (include "gluesync.fullname" .)) "container" "prometheus" "image" (.Values.prometheus.image | default "prom/prometheus") "tag" .Values.prometheus.tag) | quote }}
           args:
             - "--config.file=/etc/prometheus/prometheus.yml"
             - "--storage.tsdb.path=/prometheus"

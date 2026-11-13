@@ -1,0 +1,508 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.17.2
+  name: gluesyncplatforms.gluesync.molo17.com
+spec:
+  group: gluesync.molo17.com
+  names:
+    kind: GluesyncPlatform
+    listKind: GluesyncPlatformList
+    plural: gluesyncplatforms
+    shortNames:
+    - gsp
+    singular: gluesyncplatform
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .status.phase
+      name: Phase
+      type: string
+    - jsonPath: .status.version
+      name: Version
+      type: string
+    - jsonPath: .spec.version
+      name: Desired
+      type: string
+    - jsonPath: .status.available
+      name: Available
+      type: string
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: GluesyncPlatform is one Gluesync install and the version it should
+          run.
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: GluesyncPlatformSpec is the desired state of one Gluesync
+              install.
+            properties:
+              checkIntervalMinutes:
+                default: 360
+                description: CheckIntervalMinutes between two backoffice lookups of
+                  the available version.
+                format: int32
+                minimum: 5
+                type: integer
+              coreHub:
+                description: CoreHub tells the operator how to reach Core Hub's REST
+                  API.
+                properties:
+                  insecureSkipVerify:
+                    description: InsecureSkipVerify accepts Core Hub's self-signed
+                      certificate.
+                    type: boolean
+                  moduleAuth:
+                    description: |-
+                      ModuleAuth connects the operator to Core Hub as an external module, the way
+                      Chronos and Conductor do: the license authenticates it and Core Hub hands out
+                      an EXTERNAL_MODULE token for as long as the connection lasts.
+                    properties:
+                      advertisePort:
+                        default: 1717
+                        description: AdvertisePort of the operator's API, sent as
+                          Module-Port.
+                        format: int32
+                        type: integer
+                      advertiseScheme:
+                        description: AdvertiseScheme of the operator's API (http or
+                          https), sent as Module-Scheme.
+                        enum:
+                        - http
+                        - https
+                        type: string
+                      licenseSecretRef:
+                        description: LicenseSecretRef is the Secret key holding gs-license.dat.
+                        properties:
+                          key:
+                            default: token
+                            type: string
+                          name:
+                            type: string
+                        required:
+                        - name
+                        type: object
+                      tag:
+                        default: conductor
+                        description: |-
+                          Tag the operator registers under. "conductor" makes Core Hub treat it as the
+                          Conductor module and relay /conductor/api/* to it.
+                        type: string
+                    required:
+                    - licenseSecretRef
+                    type: object
+                  tokenSecretRef:
+                    description: |-
+                      TokenSecretRef names the Secret key that holds a Core Hub API token allowed to
+                      list pipelines and enter and exit maintenance mode. Takes precedence over ModuleAuth.
+                    properties:
+                      key:
+                        default: token
+                        type: string
+                      name:
+                        type: string
+                    required:
+                    - name
+                    type: object
+                  url:
+                    description: 'URL of Core Hub''s REST API. Empty: https://<core-hub
+                      service>:1717.'
+                    type: string
+                type: object
+              imageRegistry:
+                description: |-
+                  ImageRegistry replaces the registry and namespace of every managed image
+                  (docker.io/molo17, or the customer's mirror). Empty keeps each image's own.
+                type: string
+              maintenance:
+                description: Maintenance controls pausing pipelines while Core Hub
+                  changes.
+                properties:
+                  disabled:
+                    description: Disabled skips pausing pipelines. Not recommended.
+                    type: boolean
+                  drainTimeoutSeconds:
+                    default: 600
+                    description: DrainTimeoutSeconds the pipelines get to reach maintenance
+                      mode.
+                    format: int32
+                    minimum: 10
+                    type: integer
+                type: object
+              modules:
+                additionalProperties:
+                  type: string
+                description: |-
+                  Modules pins module versions by short image name (gluesync-chronos) or by
+                  that name without its gluesync- prefix (chronos). An unpinned module moves to
+                  the latest version on the channel whenever Core Hub is updated.
+                type: object
+              offline:
+                description: Offline stops every backoffice call. Version and module
+                  pins must then be set.
+                type: boolean
+              releaseChannel:
+                description: |-
+                  ReleaseChannel overrides the channel set in Core Hub (Settings, release
+                  channel). Leave it empty: the operator reads Core Hub's setting, so the UI and
+                  the operator always agree. Set it only for an offline install.
+                enum:
+                - ga
+                - beta
+                - alpha
+                type: string
+              requestID:
+                description: |-
+                  RequestID is set to a new value by each update request from the UI, so a
+                  request for the same version retries an update that failed or was refused.
+                type: string
+              stability:
+                description: Stability decides when a rolled-out component counts
+                  as up.
+                properties:
+                  maxWaitSeconds:
+                    default: 180
+                    description: MaxWaitSeconds from the image change until the component
+                      must have passed.
+                    format: int32
+                    minimum: 10
+                    type: integer
+                  windowSeconds:
+                    default: 20
+                    description: WindowSeconds a component must stay Ready, without
+                      a restart, to pass.
+                    format: int32
+                    minimum: 0
+                    type: integer
+                type: object
+              updatePolicy:
+                default: ui
+                description: UpdatePolicy says who may start an update.
+                enum:
+                - ui
+                - gitops
+                type: string
+              version:
+                description: 'Version is the desired Core Hub version. Empty means:
+                  keep what runs.'
+                type: string
+            type: object
+          status:
+            description: GluesyncPlatformStatus is the observed state.
+            properties:
+              available:
+                description: Available is the latest Core Hub version on the channel;
+                  empty when offline.
+                type: string
+              components:
+                items:
+                  description: ComponentStatus is one managed workload as last seen.
+                  properties:
+                    available:
+                      description: Available is the latest version on the channel,
+                        when known.
+                      type: string
+                    image:
+                      type: string
+                    kind:
+                      type: string
+                    name:
+                      type: string
+                    ready:
+                      type: boolean
+                    type:
+                      type: string
+                    version:
+                      type: string
+                  required:
+                  - image
+                  - kind
+                  - name
+                  - ready
+                  - type
+                  type: object
+                type: array
+              conditions:
+                items:
+                  description: Condition contains details for one aspect of the current
+                    state of this API Resource.
+                  properties:
+                    lastTransitionTime:
+                      description: |-
+                        lastTransitionTime is the last time the condition transitioned from one status to another.
+                        This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: |-
+                        message is a human readable message indicating details about the transition.
+                        This may be an empty string.
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: |-
+                        observedGeneration represents the .metadata.generation that the condition was set based upon.
+                        For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
+                        with respect to the current state of the instance.
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      description: |-
+                        reason contains a programmatic identifier indicating the reason for the condition's last transition.
+                        Producers of specific condition types may define expected values and meanings for this field,
+                        and whether the values are considered a guaranteed API.
+                        The value should be a CamelCase string.
+                        This field may not be empty.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
+              history:
+                items:
+                  description: HistoryEntry is one finished update.
+                  properties:
+                    finishedAt:
+                      format: date-time
+                      type: string
+                    from:
+                      type: string
+                    message:
+                      type: string
+                    previousImages:
+                      additionalProperties:
+                        type: string
+                      type: object
+                    result:
+                      type: string
+                    to:
+                      type: string
+                  required:
+                  - finishedAt
+                  - result
+                  type: object
+                type: array
+              lastAttempt:
+                description: Attempt records the outcome of the last update.
+                properties:
+                  finishedAt:
+                    format: date-time
+                    type: string
+                  generation:
+                    format: int64
+                    type: integer
+                  message:
+                    type: string
+                  modules:
+                    additionalProperties:
+                      type: string
+                    type: object
+                  pausedPipelines:
+                    items:
+                      type: string
+                    type: array
+                  result:
+                    description: Succeeded, Degraded, Failed or Refused.
+                    type: string
+                  results:
+                    items:
+                      description: ComponentResult is what an update did to one component.
+                      properties:
+                        from:
+                          type: string
+                        message:
+                          type: string
+                        name:
+                          type: string
+                        status:
+                          description: OK, ERROR, ROLLED_BACK or SKIPPED.
+                          type: string
+                        to:
+                          type: string
+                      required:
+                      - name
+                      - status
+                      type: object
+                    type: array
+                  resumedPipelines:
+                    items:
+                      type: string
+                    type: array
+                  target:
+                    type: string
+                required:
+                - finishedAt
+                - generation
+                - result
+                type: object
+              lastChecked:
+                format: date-time
+                type: string
+              message:
+                type: string
+              observedGeneration:
+                format: int64
+                type: integer
+              pausedPipelines:
+                items:
+                  type: string
+                type: array
+              phase:
+                type: string
+              releaseChannel:
+                description: ReleaseChannel read from Core Hub (GET /global-config/release-channel).
+                type: string
+              update:
+                description: |-
+                  UpdateStatus is the update in progress. It holds everything a restarted
+                  operator needs to carry on from the last finished step.
+                properties:
+                  drainListed:
+                    description: DrainListed is true once PausedPipelines holds the
+                      list to pause.
+                    type: boolean
+                  drainRequested:
+                    description: DrainRequested is true once every listed pipeline
+                      was asked to enter maintenance.
+                    type: boolean
+                  failResult:
+                    description: 'FailResult is the attempt result once the update
+                      has failed: Failed or Refused.'
+                    type: string
+                  failure:
+                    description: Failure set when Core Hub failed and is being rolled
+                      back.
+                    type: string
+                  generation:
+                    description: Generation of the spec the update was started for.
+                    format: int64
+                    type: integer
+                  moduleQueue:
+                    description: ModuleQueue is the modules still to update, in order.
+                    items:
+                      type: string
+                    type: array
+                  moduleTargets:
+                    additionalProperties:
+                      type: string
+                    description: ModuleTargets per component name, resolved in preflight.
+                    type: object
+                  pausedPipelines:
+                    description: |-
+                      PausedPipelines this update put into maintenance mode and must resume.
+                      Written before the first maintenance call, so a restart still resumes them.
+                    items:
+                      type: string
+                    type: array
+                  previousImages:
+                    additionalProperties:
+                      type: string
+                    description: PreviousImages per component name, recorded before
+                      anything is patched.
+                    type: object
+                  restartBaseline:
+                    description: RestartBaseline is the restart count when StableSince
+                      was set.
+                    format: int32
+                    type: integer
+                  results:
+                    items:
+                      description: ComponentResult is what an update did to one component.
+                      properties:
+                        from:
+                          type: string
+                        message:
+                          type: string
+                        name:
+                          type: string
+                        status:
+                          description: OK, ERROR, ROLLED_BACK or SKIPPED.
+                          type: string
+                        to:
+                          type: string
+                      required:
+                      - name
+                      - status
+                      type: object
+                    type: array
+                  resumed:
+                    description: Resumed are the paused pipelines already taken out
+                      of maintenance.
+                    items:
+                      type: string
+                    type: array
+                  stableSince:
+                    description: StableSince is when the component being checked was
+                      first seen Ready.
+                    format: date-time
+                    type: string
+                  startedAt:
+                    format: date-time
+                    type: string
+                  step:
+                    description: Step is the step being run.
+                    type: string
+                  stepStartedAt:
+                    format: date-time
+                    type: string
+                  target:
+                    description: Target Core Hub version; empty for a modules-only
+                      update.
+                    type: string
+                required:
+                - generation
+                - startedAt
+                - step
+                - stepStartedAt
+                type: object
+              version:
+                description: Version is the Core Hub version that runs.
+                type: string
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

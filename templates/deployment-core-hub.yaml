@@ -7,6 +7,7 @@ metadata:
     app.kubernetes.io/instance: {{ .Release.Name }}
     app.kubernetes.io/version: {{ .Values.gluesyncCoreHub.tag }}
     app.kubernetes.io/managed-by: {{ .Release.Service }}
+    com.molo17.conductor.type: core-hub
 spec:
   replicas: {{ .Values.replicaCount }}
   selector:
@@ -21,7 +22,7 @@ spec:
     spec:
       containers:
         - name: gluesync-core-hub
-          image: "{{ .Values.gluesyncCoreHub.image }}:{{ .Values.gluesyncCoreHub.tag }}"
+          image: {{ include "gluesync.image" (dict "ctx" . "kind" "StatefulSet" "name" (printf "%s-core-hub" (include "gluesync.fullname" .)) "container" "gluesync-core-hub" "image" .Values.gluesyncCoreHub.image "tag" .Values.gluesyncCoreHub.tag) | quote }}
           env:
             - name: SSL_ENABLED
               value: "true" # set to true if you want to activate TLS encryption
@@ -36,6 +37,19 @@ spec:
           ports:
             - containerPort: 1717
               protocol: TCP
+            # Courier inbound: HTTP Source agent listener (inboundPort 8090)
+            - containerPort: 8090
+              protocol: TCP
+          # GET /version is public; the Gluesync Kubernetes Operator (GKO) waits for Ready before it calls an update done.
+          readinessProbe:
+            httpGet: { path: /version, port: 1717, scheme: HTTPS }
+            periodSeconds: 5
+            failureThreshold: 3
+          livenessProbe:
+            httpGet: { path: /version, port: 1717, scheme: HTTPS }
+            initialDelaySeconds: 120
+            periodSeconds: 20
+            failureThreshold: 6
           resources:
             limits:
               cpu: {{ .Values.resources.gluesyncCoreHub.limits.cpu }}

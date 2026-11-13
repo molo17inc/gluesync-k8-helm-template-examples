@@ -6,6 +6,8 @@
 set -e
 
 NAMESPACE="${NAMESPACE:-gluesync-prod}"
+# Traefik chart tested with these flags (40.0.0 moved the service type to service.spec.type)
+TRAEFIK_CHART_VERSION="${TRAEFIK_CHART_VERSION:-42.3.2}"
 RELEASE_NAME="${RELEASE_NAME:-gluesync}"
 LB_SCHEME="${LB_SCHEME:-external}"  # or "internal"
 
@@ -41,14 +43,20 @@ if ! kubectl get deployment traefik -n ${NAMESPACE} &> /dev/null; then
     
     # Install Traefik with LoadBalancer for GKE
     helm upgrade --install traefik traefik/traefik \
+        --version ${TRAEFIK_CHART_VERSION} \
         --namespace ${NAMESPACE} \
         --set deployment.kind=Deployment \
-        --set service.type=LoadBalancer \
+        --set service.spec.type=LoadBalancer \
         ${TRAEFIK_ANNOTATIONS} \
         --set ingressClass.enabled=true \
         --set ingressClass.isDefaultClass=false \
         --set providers.kubernetesCRD.enabled=true \
         --set providers.kubernetesIngress.enabled=true \
+        --set ports.courier.port=8090 \
+        --set ports.courier.expose.default=true \
+        --set ports.courier.exposedPort=8090 \
+        --set ports.courier.protocol=TCP \
+        --set ports.courier.http.tls.enabled=true \
         --wait
     
     echo "✅ Traefik installed successfully"
@@ -118,11 +126,11 @@ echo ""
 # Firewall rule reminder
 echo "🔐 Firewall Configuration:"
 echo "   Ensure your GCP firewall rules allow traffic to these ports:"
-echo "   - TCP: 80, 443"
+echo "   - TCP: 80, 443, 8090 (8090: Courier inbound endpoints)"
 echo ""
 echo "   Example gcloud command to create firewall rule:"
 echo "   gcloud compute firewall-rules create allow-gluesync \\"
-echo "     --allow tcp:80,tcp:443 \\"
+echo "     --allow tcp:80,tcp:443,tcp:8090 \\"
 echo "     --source-ranges=0.0.0.0/0 \\"
 echo "     --description='Allow Gluesync ports'"
 echo ""

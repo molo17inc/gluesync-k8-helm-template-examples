@@ -1,0 +1,228 @@
+{{- if .Values.operator.enabled }}
+{{- $fullname := include "gluesync.fullname" . }}
+{{- $op := printf "%s-operator" $fullname }}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ $op }}
+  labels:
+    app.kubernetes.io/name: {{ include "gluesync.name" . }}-operator
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+---
+# Namespaced: the Gluesync Kubernetes Operator (GKO) manages the Gluesync install of this namespace only.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ $op }}
+  labels:
+    app.kubernetes.io/name: {{ include "gluesync.name" . }}-operator
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+rules:
+  - apiGroups: [gluesync.molo17.com]
+    resources: [gluesyncplatforms]
+    verbs: [get, list, watch, update, patch]
+  - apiGroups: [gluesync.molo17.com]
+    resources: [gluesyncplatforms/status]
+    verbs: [get, update, patch]
+  - apiGroups: [apps]
+    resources: [statefulsets, deployments]
+    verbs: [get, list, watch, update, patch]
+  - apiGroups: [""]
+    resources: [pods]
+    verbs: [get, list, watch, delete]
+  - apiGroups: [""]
+    resources: [secrets]
+    resourceNames: [{{ printf "%s-shared" $fullname | quote }}]
+    verbs: [get]
+  - apiGroups: ["", events.k8s.io]
+    resources: [events]
+    verbs: [create, patch]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ $op }}
+  labels:
+    app.kubernetes.io/name: {{ include "gluesync.name" . }}-operator
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ $op }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ $op }}
+    namespace: {{ .Release.Namespace }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ $op }}
+  labels:
+    app.kubernetes.io/name: {{ include "gluesync.name" . }}-operator
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/version: {{ .Values.operator.tag | quote }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "gluesync.name" . }}-operator
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: {{ include "gluesync.name" . }}-operator
+        app.kubernetes.io/instance: {{ .Release.Name }}
+    spec:
+      serviceAccountName: {{ $op }}
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: gluesync-operator
+          image: "{{ .Values.operator.image }}:{{ .Values.operator.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args:
+            - --platform=gluesync
+            - --tls-cert=/tls/tls.crt
+            - --tls-key=/tls/tls.key
+          env:
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: TZ
+              value: "UTC"
+          ports:
+            - name: api
+              containerPort: 1717
+            - name: probes
+              containerPort: 8081
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: probes
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: probes
+            initialDelaySeconds: 10
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          resources: {{- toYaml .Values.operator.resources | nindent 12 }}
+          volumeMounts:
+            - name: tls
+              mountPath: /tls
+              readOnly: true
+      volumes:
+        - name: tls
+          secret:
+            secretName: {{ $fullname }}-tls
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ $op }}
+  labels:
+    app.kubernetes.io/name: {{ include "gluesync.name" . }}-operator
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+spec:
+  selector:
+    app.kubernetes.io/name: {{ include "gluesync.name" . }}-operator
+    app.kubernetes.io/instance: {{ .Release.Name }}
+  ports:
+    - name: https-1717
+      port: 1717
+      targetPort: api
+---
+# The Core Hub UI reaches Conductor at /conductor/api, as in the Docker kit.
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: {{ $op }}-conductor-api
+  namespace: {{ .Release.Namespace }}
+spec:
+  stripPrefix:
+    prefixes:
+      - /conductor/api
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: {{ $op }}-conductor-api
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: {{ include "gluesync.name" . }}-operator
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: PathPrefix(`/conductor/api`)
+      kind: Rule
+      priority: 20
+      middlewares:
+        - name: {{ $op }}-conductor-api
+      services:
+        - name: {{ $op }}
+          port: 1717
+          scheme: https
+          serversTransport: insecure-transport
+  tls: {}
+---
+{{- /* Keep the version the operator or the UI set since install: Helm never reverts an update. */ -}}
+{{- $live := lookup "gluesync.molo17.com/v1alpha1" "GluesyncPlatform" .Release.Namespace "gluesync" -}}
+{{- $version := toString .Values.gluesyncCoreHub.tag -}}
+{{- $modules := dict -}}
+{{- $requestID := "" -}}
+{{- if $live -}}
+{{- $version = default $version $live.spec.version -}}
+{{- $modules = default (dict) $live.spec.modules -}}
+{{- $requestID = default "" $live.spec.requestID -}}
+{{- end }}
+apiVersion: gluesync.molo17.com/v1alpha1
+kind: GluesyncPlatform
+metadata:
+  name: gluesync
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/name: {{ include "gluesync.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+  annotations:
+    helm.sh/resource-policy: keep
+spec:
+  # No releaseChannel: the operator reads Core Hub's own setting.
+  version: {{ $version | quote }}
+  {{- with $modules }}
+  modules: {{- toYaml . | nindent 4 }}
+  {{- end }}
+  {{- with $requestID }}
+  requestID: {{ . | quote }}
+  {{- end }}
+  updatePolicy: {{ .Values.operator.updatePolicy }}
+  stability: {{- toYaml .Values.operator.stability | nindent 4 }}
+  maintenance: {{- toYaml .Values.operator.maintenance | nindent 4 }}
+  coreHub:
+    url: "https://{{ $fullname }}-core-hub:1717"
+    insecureSkipVerify: true
+    moduleAuth:
+      licenseSecretRef:
+        name: {{ $fullname }}-shared
+        key: gs-license.dat
+      tag: conductor
+      advertisePort: 1717
+      advertiseScheme: https
+{{- end }}

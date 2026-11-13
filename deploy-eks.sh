@@ -6,6 +6,8 @@
 set -e
 
 NAMESPACE="${NAMESPACE:-gluesync-prod}"
+# Traefik chart tested with these flags (40.0.0 moved the service type to service.spec.type)
+TRAEFIK_CHART_VERSION="${TRAEFIK_CHART_VERSION:-42.3.2}"
 RELEASE_NAME="${RELEASE_NAME:-gluesync}"
 LB_SCHEME="${LB_SCHEME:-internet-facing}"  # or "internal"
 
@@ -34,14 +36,20 @@ if ! kubectl get deployment traefik -n ${NAMESPACE} &> /dev/null; then
     
     # Install Traefik with LoadBalancer for EKS
     helm upgrade --install traefik traefik/traefik \
+        --version ${TRAEFIK_CHART_VERSION} \
         --namespace ${NAMESPACE} \
         --set deployment.kind=Deployment \
-        --set service.type=LoadBalancer \
+        --set service.spec.type=LoadBalancer \
         --set service.annotations."service\.beta\.kubernetes\.io/aws-load-balancer-scheme"=${LB_SCHEME} \
         --set ingressClass.enabled=true \
         --set ingressClass.isDefaultClass=false \
         --set providers.kubernetesCRD.enabled=true \
         --set providers.kubernetesIngress.enabled=true \
+        --set ports.courier.port=8090 \
+        --set ports.courier.expose.default=true \
+        --set ports.courier.exposedPort=8090 \
+        --set ports.courier.protocol=TCP \
+        --set ports.courier.http.tls.enabled=true \
         --wait
     
     echo "✅ Traefik installed successfully"
