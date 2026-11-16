@@ -35,6 +35,10 @@ spec:
               value: "https://%(domain)s/grafana/"
             - name: GF_SERVER_SERVE_FROM_SUB_PATH
               value: "true"
+            # The Gluesync UI shows Grafana in an iframe; without this Grafana answers
+            # X-Frame-Options: deny and the browser leaves the Grafana page blank
+            - name: GF_SECURITY_ALLOW_EMBEDDING
+              value: "true"
           ports:
             - containerPort: 3000
               protocol: TCP

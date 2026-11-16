@@ -18,6 +18,9 @@ update. Args: dict "ctx" . "kind" "StatefulSet" "name" <workload> "container" <n
 Optional "newerTagWins" true: a values.yaml tag that is a higher X.Y.Z than the live
 one still wins (GKO's own image: a newer kit upgrades GKO, an older one never
 downgrades the version GKO moved itself to).
+A live "latest" tag is never kept: GKO only sets release versions, so "latest" comes
+from an old values.yaml and the values.yaml tag replaces it (molo17/grafana:latest and
+molo17/prometheus:latest are Windows images that cannot start on Linux nodes).
 */ -}}
 {{- define "gluesync.image" -}}
 {{- $img := printf "%s:%s" .image (toString .tag) -}}
@@ -29,7 +32,7 @@ downgrades the version GKO moved itself to).
 {{- if eq .name $.container -}}{{- $liveImg = .image -}}{{- end -}}
 {{- end -}}
 {{- if $liveImg -}}
-{{- $keep := true -}}
+{{- $keep := ne (last (splitList ":" $liveImg)) "latest" -}}
 {{- if .newerTagWins -}}
 {{- $want := regexFind "^[0-9]+\\.[0-9]+\\.[0-9]+" (toString .tag) -}}
 {{- $have := regexFind "^[0-9]+\\.[0-9]+\\.[0-9]+" (last (splitList ":" $liveImg)) -}}
