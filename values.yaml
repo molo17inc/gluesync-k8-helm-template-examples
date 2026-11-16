@@ -19,12 +19,12 @@ gluesyncChronos:
 grafana:
   name: "grafana"
   image: "molo17/grafana"
-  tag: "latest"
+  tag: "13.0.11.dashboard3" # never "latest": that tag is a Windows image and cannot start on Linux nodes
 
 prometheus:
   name: "prometheus"
   image: "molo17/prometheus"
-  tag: "latest"
+  tag: "3.15.1" # never "latest": that tag is a Windows image and cannot start on Linux nodes
 
 # Global persistence settings (can be overridden per service)
 persistence:
