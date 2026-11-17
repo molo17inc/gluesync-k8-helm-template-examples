@@ -39,6 +39,12 @@ spec:
             # X-Frame-Options: deny and the browser leaves the Grafana page blank
             - name: GF_SECURITY_ALLOW_EMBEDDING
               value: "true"
+            {{- with .Values.grafana.trustedOrigins }}
+            # A proxy in front rewrites the Host header: trust the names users browse to, or Grafana
+            # answers every panel query 403 "origin not allowed"
+            - name: GF_SECURITY_CSRF_TRUSTED_ORIGINS
+              value: {{ . | quote }}
+            {{- end }}
           ports:
             - containerPort: 3000
               protocol: TCP

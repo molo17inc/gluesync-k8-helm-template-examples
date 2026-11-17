@@ -191,6 +191,15 @@ Gluesync uses Traefik IngressRoutes for advanced routing:
 - **ServersTransport**: TLS backend communication with `insecureSkipVerify`
 - **TLS Termination**: Handled by Traefik at the edge
 
+If another proxy sits in front of Traefik and rewrites the `Host` header (for example, it forwards to the load balancer's IP), Grafana opens but every panel stays empty: Grafana answers each query `403 origin not allowed`, because the browser's `Origin` no longer matches the `Host` it receives. Set the names users browse to, space-separated:
+
+```yaml
+grafana:
+  trustedOrigins: "gluesync.example.com"
+```
+
+Alternatively, have the outer proxy pass the original `Host` header through.
+
 ### Service Ports
 
 | Port | Service | Protocol | Description |
