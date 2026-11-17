@@ -37,7 +37,7 @@ spec:
           ports:
             - containerPort: 1717
               protocol: TCP
-            # Courier inbound: HTTP Source agent listener (inboundPort 8090)
+            # Courier inbound: Core Hub's inbound server (GLUESYNC_COURIER_PORT, 8090), HTTPS like 1717
             - containerPort: 8090
               protocol: TCP
           # GET /version is public; the Gluesync Kubernetes Operator (GKO) waits for Ready before it calls an update done.

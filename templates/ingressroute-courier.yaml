@@ -1,6 +1,8 @@
 # Courier inbound endpoints: Traefik's `courier` entry point (HTTPS on 8090, see the deploy-*.sh
-# Traefik install) forwards /api-inbound/ to the HTTP Source agent inside Core Hub over plain HTTP.
-# Set the agent to inboundPort 8090 and inboundAllowPlainHttp true: TLS ends at Traefik.
+# Traefik install) forwards /api-inbound/ to Core Hub's own inbound server on port 8090.
+# Since Core Hub 2.3.2.2 that server speaks HTTPS whenever Core Hub does, and this chart always runs
+# Core Hub with TLS (SSL_ENABLED "true" in deployment-core-hub.yaml), so Traefik reaches it over
+# HTTPS with the same insecure-transport as the Core Hub route (self-signed certificate).
 apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
 metadata:
@@ -20,5 +22,6 @@ spec:
       services:
         - name: {{ include "gluesync.fullname" . }}-core-hub
           port: 8090
-          scheme: http
+          scheme: https
+          serversTransport: insecure-transport
   tls: {}

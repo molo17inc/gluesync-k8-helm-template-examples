@@ -157,7 +157,7 @@ spec:
 |------|---------|----------|-------------|
 | 443 | Traefik HTTPS | TCP | Main HTTPS entry point (all services) |
 | 80 | Traefik HTTP | TCP | HTTP entry point (redirects to HTTPS) |
-| 8090 | Traefik Courier | TCP | HTTPS entry point of the Courier inbound endpoints (`/api-inbound/`), forwarded to the HTTP Source agent in Core Hub |
+| 8090 | Traefik Courier | TCP | HTTPS entry point of the Courier inbound endpoints (`/api-inbound/`), forwarded over HTTPS to Core Hub's inbound server on port 8090 |
 | 1717 | Backend Services | TCP | Internal HTTPS for CoreHub/Chronos |
 | 3000 | Grafana | TCP | Grafana monitoring interface |
 | 9090 | Prometheus | TCP | Prometheus metrics |
