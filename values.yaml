@@ -20,6 +20,10 @@ grafana:
   name: "grafana"
   image: "molo17/grafana"
   tag: "13.0.11.dashboard3" # never "latest": that tag is a Windows image and cannot start on Linux nodes
+  # Host names users reach Gluesync on, when a proxy in front rewrites the Host header (e.g. "gluesync.example.com").
+  # Grafana rejects signed-in requests whose Origin does not match the Host it receives ("origin not allowed"),
+  # which leaves every dashboard panel empty. Space-separated; leave empty when the Host header reaches Traefik unchanged.
+  trustedOrigins: ""
 
 prometheus:
   name: "prometheus"
