@@ -36,6 +36,23 @@ rules:
     resources: [secrets]
     resourceNames: [{{ printf "%s-shared" $fullname | quote }}]
     verbs: [get]
+  # Disaster recovery (Core Hub UI, Settings, Disaster Recovery): the Secret with
+  # the GS_DR_* variables, its backup, the Service of ports 1718 and 1719, and the
+  # claim of the Chronos data. create cannot be limited to names.
+  - apiGroups: [""]
+    resources: [secrets, services]
+    verbs: [create]
+  - apiGroups: [""]
+    resources: [secrets]
+    resourceNames: [gko-disaster-recovery, gko-disaster-recovery-backup]
+    verbs: [get, update, delete]
+  - apiGroups: [""]
+    resources: [services]
+    resourceNames: [gko-disaster-recovery]
+    verbs: [get, update, delete]
+  - apiGroups: [""]
+    resources: [persistentvolumeclaims]
+    verbs: [get]
   # Courier inbound heal: GKO adds the port 8090 of Core Hub's Service and the
   # IngressRoute of /api-inbound/ to an install that lacks them (patches Traefik's
   # Deployment and Service with the rules above and these).
